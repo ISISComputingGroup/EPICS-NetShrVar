@@ -1,20 +1,20 @@
 /** @example netvarconfig.xml
-Example XML config file loaded by NINetVarConfigure() in @link st.cmd @endlink
+Example XML config file loaded by NetShrVarConfigure() in @link st.cmd @endlink
 */
 
 /** @example st.cmd
-Example IOC startup file - calls NINetVarConfigure() to load @link netvarconfig.xml @endlink
+Example IOC startup file - calls NetShrVarConfigure() to load @link netvarconfig.xml @endlink
 */
 
-/** @example TestNINetVar.db
+/** @example TestNetShrVar.db
 Example EPICS DB file, generated from @link netvarconfig.xml @endlink using @link netvarconfig2db.xsl @endlink
 */
 
-/** @example NINetVarConfig.xsd
+/** @example NetShrVarConfig.xsd
 XML schema file for @link netvarconfig.xml @endlink
 */
 
 /** @example netvarconfig2db.xsl
-Generates an epics DB file @link TestNINetVar.db @endlink from an XML config file @link netvarconfig.xml @endlink
+Generates an epics DB file @link TestNetShrVar.db @endlink from an XML config file @link netvarconfig.xml @endlink
 */
 

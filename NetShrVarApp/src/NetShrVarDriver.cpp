@@ -5,7 +5,7 @@
 * in the file LICENSE.txt that is included with this distribution. 
 \*************************************************************************/ 
 
-/// @file NINetVarDriver.cpp Implementation of #NINetVarDriver class and NINetVarConfigure() iocsh command
+/// @file NetShrVarDriver.cpp Implementation of #NetShrVarDriver class and NetShrVarConfigure() iocsh command
 /// @author Freddie Akeroyd, STFC ISIS Facility, GB
 
 #include <stdlib.h>
@@ -30,8 +30,8 @@
 #include <windows.h>
 
 #include "convertToString.h"
-#include "NINetVarInterface.h"
-#include "NINetVarDriver.h"
+#include "NetShrVarInterface.h"
+#include "NetShrVarDriver.h"
 
 #include <epicsExport.h>
 
@@ -44,7 +44,7 @@ std::string Win32StructuredException::win32_message(unsigned int code, EXCEPTION
 	return std::string(buffer);
 }
 
-static const char *driverName="NINetVarDriver"; ///< Name of driver for use in message printing 
+static const char *driverName="NetShrVarDriver"; ///< Name of driver for use in message printing 
 
 /// Function to translate a Win32 structured exception into a standard C++ exception. 
 /// This is registered via registerStructuredExceptionHandler()
@@ -65,7 +65,7 @@ static void registerStructuredExceptionHandler()
 /// @param[in] functionName Name of overloaded ASYN driver function that called us, used for diagnostics
 /// @param[in] value Value to write
 template<typename T>
-asynStatus NINetVarDriver::writeValue(asynUser *pasynUser, const char* functionName, T value)
+asynStatus NetShrVarDriver::writeValue(asynUser *pasynUser, const char* functionName, T value)
 {
 	int function = pasynUser->reason;
 	asynStatus status = asynSuccess;
@@ -100,7 +100,7 @@ asynStatus NINetVarDriver::writeValue(asynUser *pasynUser, const char* functionN
 /// @param[in] value Value to write
 /// @param[in] nElements number of array elements
 template<typename T>
-asynStatus NINetVarDriver::writeArrayValue(asynUser *pasynUser, const char* functionName, T* value, size_t nElements)
+asynStatus NetShrVarDriver::writeArrayValue(asynUser *pasynUser, const char* functionName, T* value, size_t nElements)
 {
 	int function = pasynUser->reason;
 	asynStatus status = asynSuccess;
@@ -131,19 +131,19 @@ asynStatus NINetVarDriver::writeArrayValue(asynUser *pasynUser, const char* func
 /// write a float to the driver
 /// @param[in] pasynUser pointer to AsynUser instance
 /// @param[in] value Value to write
-asynStatus NINetVarDriver::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
+asynStatus NetShrVarDriver::writeFloat64(asynUser *pasynUser, epicsFloat64 value)
 {
 	asynStatus status = writeValue(pasynUser, "writeFloat64", value);
 	return (status == asynSuccess ? asynPortDriver::writeFloat64(pasynUser, value) : status);
 }
 
-asynStatus NINetVarDriver::writeInt32(asynUser *pasynUser, epicsInt32 value)
+asynStatus NetShrVarDriver::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
 	asynStatus status = writeValue(pasynUser, "writeInt32", value);
 	return (status == asynSuccess ? asynPortDriver::writeInt32(pasynUser, value) : status);
 }
 
-asynStatus NINetVarDriver::writeOctet(asynUser *pasynUser, const char *value, size_t maxChars, size_t *nActual)
+asynStatus NetShrVarDriver::writeOctet(asynUser *pasynUser, const char *value, size_t maxChars, size_t *nActual)
 {
 	int function = pasynUser->reason;
 	asynStatus status = asynSuccess;
@@ -175,33 +175,33 @@ asynStatus NINetVarDriver::writeOctet(asynUser *pasynUser, const char *value, si
 	}
 }
 
-asynStatus NINetVarDriver::readFloat64Array(asynUser *pasynUser, epicsFloat64 *value, size_t nElements, size_t *nIn)
+asynStatus NetShrVarDriver::readFloat64Array(asynUser *pasynUser, epicsFloat64 *value, size_t nElements, size_t *nIn)
 {
 	return readArrayValue(pasynUser, "readFloat64Array", value, nElements, nIn);
 }
 
-asynStatus NINetVarDriver::readFloat32Array(asynUser *pasynUser, epicsFloat32 *value, size_t nElements, size_t *nIn)
+asynStatus NetShrVarDriver::readFloat32Array(asynUser *pasynUser, epicsFloat32 *value, size_t nElements, size_t *nIn)
 {
 	return readArrayValue(pasynUser, "readFloat32Array", value, nElements, nIn);
 }
 
-asynStatus NINetVarDriver::readInt32Array(asynUser *pasynUser, epicsInt32 *value, size_t nElements, size_t *nIn)
+asynStatus NetShrVarDriver::readInt32Array(asynUser *pasynUser, epicsInt32 *value, size_t nElements, size_t *nIn)
 {
 	return readArrayValue(pasynUser, "readInt32Array", value, nElements, nIn);
 }
 
-asynStatus NINetVarDriver::readInt16Array(asynUser *pasynUser, epicsInt16 *value, size_t nElements, size_t *nIn)
+asynStatus NetShrVarDriver::readInt16Array(asynUser *pasynUser, epicsInt16 *value, size_t nElements, size_t *nIn)
 {
 	return readArrayValue(pasynUser, "readInt16Array", value, nElements, nIn);
 }
 
-asynStatus NINetVarDriver::readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)
+asynStatus NetShrVarDriver::readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn)
 {
 	return readArrayValue(pasynUser, "readInt8Array", value, nElements, nIn);
 }
 
 template<typename T>
-asynStatus NINetVarDriver::readArrayValue(asynUser *pasynUser, const char* functionName, T *value, size_t nElements, size_t *nIn)
+asynStatus NetShrVarDriver::readArrayValue(asynUser *pasynUser, const char* functionName, T *value, size_t nElements, size_t *nIn)
 {
 	int function = pasynUser->reason;
 	asynStatus status = asynSuccess;
@@ -230,33 +230,33 @@ asynStatus NINetVarDriver::readArrayValue(asynUser *pasynUser, const char* funct
 	}
 }
 
-asynStatus NINetVarDriver::writeInt32Array(asynUser *pasynUser, epicsInt32 *value, size_t nElements)
+asynStatus NetShrVarDriver::writeInt32Array(asynUser *pasynUser, epicsInt32 *value, size_t nElements)
 {
     return writeArrayValue(pasynUser, "writeInt32Array", value, nElements);
 }
 
-asynStatus NINetVarDriver::writeInt16Array(asynUser *pasynUser, epicsInt16 *value, size_t nElements)
+asynStatus NetShrVarDriver::writeInt16Array(asynUser *pasynUser, epicsInt16 *value, size_t nElements)
 {
     return writeArrayValue(pasynUser, "writeInt16Array", value, nElements);
 }
 
-asynStatus NINetVarDriver::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements)
+asynStatus NetShrVarDriver::writeInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements)
 {
     return writeArrayValue(pasynUser, "writeInt8Array", value, nElements);
 }
 
-asynStatus NINetVarDriver::writeFloat64Array(asynUser *pasynUser, epicsFloat64 *value, size_t nElements)
+asynStatus NetShrVarDriver::writeFloat64Array(asynUser *pasynUser, epicsFloat64 *value, size_t nElements)
 {
     return writeArrayValue(pasynUser, "writeFloat64Array", value, nElements);
 }
 
-asynStatus NINetVarDriver::writeFloat32Array(asynUser *pasynUser, epicsFloat32 *value, size_t nElements)
+asynStatus NetShrVarDriver::writeFloat32Array(asynUser *pasynUser, epicsFloat32 *value, size_t nElements)
 {
     return writeArrayValue(pasynUser, "writeFloat32Array", value, nElements);
 }
 
 /// EPICS driver report function for iocsh dbior command
-void NINetVarDriver::report(FILE* fp, int details)
+void NetShrVarDriver::report(FILE* fp, int details)
 {
 	if (m_netvarint != NULL)
 	{
@@ -270,13 +270,13 @@ void NINetVarDriver::report(FILE* fp, int details)
 }
 
 
-/// Constructor for the #NINetVarDriver class.
+/// Constructor for the #NetShrVarDriver class.
 /// Calls constructor for the asynPortDriver base class and sets up driver parameters.
 ///
-/// @param[in] netvarint  interface pointer created by NINetVarConfigure()
+/// @param[in] netvarint  interface pointer created by NetShrVarConfigure()
 /// @param[in] poll_ms  @copydoc initArg0
 /// @param[in] portName @copydoc initArg3
-NINetVarDriver::NINetVarDriver(NINetVarInterface* netvarint, int poll_ms, const char *portName) 
+NetShrVarDriver::NetShrVarDriver(NetShrVarInterface* netvarint, int poll_ms, const char *portName) 
 	: asynPortDriver(portName, 
 	0, /* maxAddr */ 
 	netvarint->nParams(),
@@ -288,7 +288,7 @@ NINetVarDriver::NINetVarDriver(NINetVarInterface* netvarint, int poll_ms, const 
 	0),	/* Default stack size*/
 	m_netvarint(netvarint), m_poll_ms(poll_ms), m_shutting_down(false)
 {
-	const char *functionName = "NINetVarDriver";
+	const char *functionName = "NetShrVarDriver";
 	
 	m_netvarint->createParams(this);
 	if (poll_ms == 0)
@@ -298,19 +298,19 @@ NINetVarDriver::NINetVarDriver(NINetVarInterface* netvarint, int poll_ms, const 
     epicsAtExit(epicsExitFunc, this);
 
 	// Create the thread for background tasks (not used at present, could be used for I/O intr scanning) 
-	if (epicsThreadCreate("NINetVarDriverTask",
+	if (epicsThreadCreate("NetShrVarDriverTask",
 		epicsThreadPriorityMedium,
 		epicsThreadGetStackSize(epicsThreadStackMedium),
-		(EPICSTHREADFUNC)NINetVarTask, this) == 0)
+		(EPICSTHREADFUNC)NetShrVarTask, this) == 0)
 	{
 		printf("%s:%s: epicsThreadCreate failure\n", driverName, functionName);
 		return;
 	}
 }
 
-void NINetVarDriver::epicsExitFunc(void* arg)
+void NetShrVarDriver::epicsExitFunc(void* arg)
 {
-	NINetVarDriver* driver = static_cast<NINetVarDriver*>(arg);
+	NetShrVarDriver* driver = static_cast<NetShrVarDriver*>(arg);
 	if (driver == NULL)
 	{
 		return;
@@ -319,9 +319,9 @@ void NINetVarDriver::epicsExitFunc(void* arg)
 }
 
 
-void NINetVarDriver::NINetVarTask(void* arg) 
+void NetShrVarDriver::NetShrVarTask(void* arg) 
 { 
-	NINetVarDriver* driver = (NINetVarDriver*)arg; 	
+	NetShrVarDriver* driver = (NetShrVarDriver*)arg; 	
 	registerStructuredExceptionHandler();
 	int poll_ms = driver->pollTime();
 	if (poll_ms > 0)
@@ -336,35 +336,35 @@ void NINetVarDriver::NINetVarTask(void* arg)
 
 extern "C" {
 
-	/// EPICS iocsh callable function to call constructor of NINetVarInterface().
-	/// The function is registered via NINetVarRegister().
+	/// EPICS iocsh callable function to call constructor of NetShrVarInterface().
+	/// The function is registered via NetShrVarRegister().
 	///
 	/// @param[in] portName @copydoc initArg0
 	/// @param[in] configSection @copydoc initArg1
 	/// @param[in] configFile @copydoc initArg2
 	/// @param[in] pollPeriod @copydoc initArg3
 	/// @param[in] options @copydoc initArg4
-	int NINetVarConfigure(const char *portName, const char* configSection, const char *configFile, int pollPeriod, int options)
+	int NetShrVarConfigure(const char *portName, const char* configSection, const char *configFile, int pollPeriod, int options)
 	{
 		registerStructuredExceptionHandler();
 		try
 		{
-			NINetVarInterface* netvarint = new NINetVarInterface(configSection, configFile, options);
+			NetShrVarInterface* netvarint = new NetShrVarInterface(configSection, configFile, options);
 			if (netvarint != NULL)
 			{
-				new NINetVarDriver(netvarint, pollPeriod, portName);
+				new NetShrVarDriver(netvarint, pollPeriod, portName);
 				return(asynSuccess);
 			}
 			else
 			{
-				errlogSevPrintf(errlogFatal, "NINetVarConfigure failed (NULL)\n");
+				errlogSevPrintf(errlogFatal, "NetShrVarConfigure failed (NULL)\n");
 				return(asynError);
 			}
 
 		}
 		catch(const std::exception& ex)
 		{
-			errlogSevPrintf(errlogFatal, "NINetVarConfigure failed: %s\n", ex.what());
+			errlogSevPrintf(errlogFatal, "NetShrVarConfigure failed: %s\n", ex.what());
 			return(asynError);
 		}
 	}
@@ -375,7 +375,7 @@ extern "C" {
 	static const iocshArg initArg1 = { "configSection", iocshArgString};	///< section name of \a configFile to use to configure this asyn port
 	static const iocshArg initArg2 = { "configFile", iocshArgString};		///< Path to the XML input file to load configuration information from
 	static const iocshArg initArg3 = { "pollPeriod", iocshArgInt};			    ///< poll period (ms)
-	static const iocshArg initArg4 = { "options", iocshArgInt};			    ///< options as per #NINetVarOptions enum
+	static const iocshArg initArg4 = { "options", iocshArgInt};			    ///< options as per #NetShrVarOptions enum
 
 	static const iocshArg * const initArgs[] = { &initArg0,
 		&initArg1,
@@ -383,20 +383,20 @@ extern "C" {
 		&initArg3,
 		&initArg4 };
 
-	static const iocshFuncDef initFuncDef = {"NINetVarConfigure", sizeof(initArgs) / sizeof(iocshArg*), initArgs};
+	static const iocshFuncDef initFuncDef = {"NetShrVarConfigure", sizeof(initArgs) / sizeof(iocshArg*), initArgs};
 
 	static void initCallFunc(const iocshArgBuf *args)
 	{
-		NINetVarConfigure(args[0].sval, args[1].sval, args[2].sval, args[3].ival, args[4].ival);
+		NetShrVarConfigure(args[0].sval, args[1].sval, args[2].sval, args[3].ival, args[4].ival);
 	}
 	
 	/// Register new commands with EPICS IOC shell
-	static void NINetVarRegister(void)
+	static void NetShrVarRegister(void)
 	{
 		iocshRegister(&initFuncDef, initCallFunc);
 	}
 
-	epicsExportRegistrar(NINetVarRegister);
+	epicsExportRegistrar(NetShrVarRegister);
 
 }
 

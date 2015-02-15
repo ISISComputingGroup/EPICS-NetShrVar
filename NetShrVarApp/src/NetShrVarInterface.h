@@ -5,11 +5,11 @@
 * in the file LICENSE.txt that is included with this distribution. 
 \*************************************************************************/ 
 
-/// @file NINetVarInterface.h header for #NINetVarInterface class. 
+/// @file NetShrVarInterface.h header for #NetShrVarInterface class. 
 /// @author Freddie Akeroyd, STFC ISIS Facility, GB
 
-#ifndef NINETVAR_INTERFACE_H
-#define NINETVAR_INTERFACE_H
+#ifndef NETSHRVAR_INTERFACE_H
+#define NETSHRVAR_INTERFACE_H
 
 #include <stdio.h>
 
@@ -36,20 +36,20 @@
 #include <cvinetv.h>
 
 
-/// option argument in NINetVarConfigure() of @link st.cmd @endlink not used at present
-enum NINetVarOptions { NVNothing = 0, NVSomething=1 };
+/// option argument in NetShrVarConfigure() of @link st.cmd @endlink not used at present
+enum NetShrVarOptions { NVNothing = 0, NVSomething=1 };
 
 struct NvItem;
 class asynPortDriver;
 struct CallbackData;
 
 /// Manager class for the NetVar Interaction. Parses an @link netvarconfig.xml @endlink file and provides access to the 9variables described within. 
-class NINetVarInterface
+class NetShrVarInterface
 {
 public:
-	NINetVarInterface(const char* configSection, const char *configFile, int options);
+	NetShrVarInterface(const char* configSection, const char *configFile, int options);
 	long nParams();
-	~NINetVarInterface() { if (m_pxmldom != NULL) { m_pxmldom->Release(); m_pxmldom = 0; } }
+	~NetShrVarInterface() { if (m_pxmldom != NULL) { m_pxmldom->Release(); m_pxmldom = 0; } }
 	void updateValues();
 	void createParams(asynPortDriver* driver);
 	void report(FILE* fp, int details);
@@ -63,7 +63,7 @@ public:
 private:
 	std::string m_configSection;  ///< section of \a configFile to load information from
 	std::string m_configFile;   
-	int m_options; ///< the various #NINetVarOptions currently in use
+	int m_options; ///< the various #NetShrVarOptions currently in use
 //	epicsMutex m_lock;
 	IXMLDOMDocument2 *m_pxmldom;
 	asynPortDriver* m_driver;
@@ -74,7 +74,7 @@ private:
 	void DomFromCOM();
 	void setValueCNV(const std::string& name, CNVData value);
 	static void epicsExitFunc(void* arg);
-	bool checkOption(NINetVarOptions option) { return ( m_options & static_cast<int>(option) ) != 0; }
+	bool checkOption(NetShrVarOptions option) { return ( m_options & static_cast<int>(option) ) != 0; }
 	void connectVars();
 	template<typename T> void updateParamValue(int param_index, T val, bool do_asyn_param_callbacks);
 	template<typename T> void updateParamArrayValue(int param_index, T* val, size_t nElements);
@@ -83,4 +83,4 @@ private:
 	template<typename T,typename U> void updateParamArrayValueImpl(int param_index, T* val, size_t nElements);
 };
 
-#endif /* NINETVAR_INTERFACE_H */
+#endif /* NETSHRVAR_INTERFACE_H */

@@ -6,24 +6,24 @@ include $(TOP)/configure/CONFIG
 #=============================
 
 #=============================
-# Build the IOC application TestNINetVar
+# Build the IOC application TestNetShrVar
 # We actually use $(APPNAME) below so this file can be included by multiple IOCs
 
 PROD_IOC = $(APPNAME)
-# TestNINetVar.dbd will be created and installed
+# TestNetShrVar.dbd will be created and installed
 DBD += $(APPNAME).dbd
 
-# TestNINetVar.dbd will be made up from these files:
+# TestNetShrVar.dbd will be made up from these files:
 $(APPNAME)_DBD += base.dbd
-$(APPNAME)_DBD += NINetVar.dbd
+$(APPNAME)_DBD += NetShrVar.dbd
 
 # Add all the support libraries needed by this IOC
-$(APPNAME)_LIBS += NINetVar
+$(APPNAME)_LIBS += NetShrVar
 $(APPNAME)_LIBS += asyn
 $(APPNAME)_LIBS += autosave
 #$(APPNAME)_LIBS += pugixml
 
-# TestNINetVar_registerRecordDeviceDriver.cpp derives from TestNINetVar.dbd
+# TestNetShrVar_registerRecordDeviceDriver.cpp derives from TestNetShrVar.dbd
 $(APPNAME)_SRCS += $(APPNAME)_registerRecordDeviceDriver.cpp
 
 # Build the main IOC entry point on workstation OSs.
@@ -39,9 +39,9 @@ $(APPNAME)_LIBS += $(EPICS_BASE_IOC_LIBS)
 $(APPNAME)_SYS_LIBS_WIN32 += msxml2 comsuppw
 
 ifneq ($(findstring windows,$(EPICS_HOST_ARCH)),)
-CVILIB = $(TOP)/NINetVarApp/src/O.$(EPICS_HOST_ARCH)/CVI/extlib/msvc64
+CVILIB = $(TOP)/NetShrVarApp/src/O.$(EPICS_HOST_ARCH)/CVI/extlib/msvc64
 else
-CVILIB = $(TOP)/NINetVarApp/src/O.$(EPICS_HOST_ARCH)/CVI/extlib/msvc
+CVILIB = $(TOP)/NetShrVarApp/src/O.$(EPICS_HOST_ARCH)/CVI/extlib/msvc
 endif
 $(APPNAME)_SYS_LIBS_WIN32 += $(CVILIB)/cvinetv $(CVILIB)/cvisupp $(CVILIB)/cvirt
 

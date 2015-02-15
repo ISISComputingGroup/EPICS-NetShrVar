@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-    @file netvarconfig.xml Example NiNetVar driver configuration file. Loaded at IOC boot time in @link st.cmd @endlink via e.g.
+    @file netvarconfig.xml Example NetShrVar driver configuration file. Loaded at IOC boot time in @link st.cmd @endlink via e.g.
 	
-	    NINetVarConfigure("ex1", "sec1", "$(TOP)/TestNINetVarApp/src/netvarconfig.xml", 100)
+	    NetShrVarConfigure("ex1", "sec1", "$(TOP)/TestNetShrVarApp/src/netvarconfig.xml", 100)
 
     @author Freddie Akeroyd, STFC ISIS facility, UK (freddie.akeroyd at stfc.ac.uk)
 	
@@ -13,12 +13,12 @@
     $HeadURL$:
 	
 -->
-<ninetvar 
-  xmlns="http://epics.isis.rl.ac.uk/NiNetVarConfig/1.0"
+<netvar 
+  xmlns="http://epics.isis.rl.ac.uk/NetShrVarConfig/1.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://epics.isis.rl.ac.uk/NiNetVarConfig/1.0 ../../NiNetVarApp/src/NiNetVarConfig.xsd">
+  xsi:schemaLocation="http://epics.isis.rl.ac.uk/NetShrVarConfig/1.0 ../../NetShrVarApp/src/NetShrVarConfig.xsd">
 
-   <!-- this name will be mapped (via NiNetVarConfigure()) to an asyn driver port name that can then be specified in an EPICS db record -->
+   <!-- this name will be mapped (via NetShrVarConfigure()) to an asyn driver port name that can then be specified in an EPICS db record -->
    <section name="sec1"> 
 
 	  <!--
@@ -26,7 +26,7 @@
 		  "access" is a comma separated list of how the shared variable is accessed: R (reader), BR (buffered reader), W (writer), BW (buffered writer)
 		  "type" is the asyn parameter type - it does not need to be identical to the shared variable type, but
 		          must be compatible (i.e. numeric if shared variable is numeric). 
-		          Valid values are: int32, float64, boolean, string, float32array, float64array, int8array, int16array, int32array - see @link NiNetVarConfig.xsd @endlink
+		          Valid values are: int32, float64, boolean, string, float32array, float64array, int8array, int16array, int32array - see @link NetShrVarConfig.xsd @endlink
 		  "netvar" is the path to the shared variable - you can use / rather than \
 		  "fval" and "tval" are only used for boolean type, they are the strings to be displayed for false and true values
 		  "field" is only used for a structure type network shared variable, it indicates the structure element to access. Structures are read-only.
@@ -47,4 +47,4 @@
 
 	</section>
   
-</ninetvar>
+</netvar>

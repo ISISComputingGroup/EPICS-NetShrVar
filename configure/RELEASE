@@ -48,7 +48,7 @@ ZLIB=$(SUPPORT)/zlib/1-2-8
 
 ## add other modules here ##
 ASYN=$(SUPPORT)/asyn/4-22
-NINETVAR=$(SUPPORT)/NINetVar
+NETSHRVAR=$(SUPPORT)/NetShrVar
 ONCRPC=$(SUPPORT)/oncrpc/2
 
 include $(TOP)/../../ISIS_CONFIG.$(EPICS_HOST_ARCH)

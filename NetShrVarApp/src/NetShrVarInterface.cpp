@@ -5,7 +5,7 @@
 * in the file LICENSE.txt that is included with this distribution. 
 \*************************************************************************/ 
 
-/// @file NINetVarInterface.cpp Implementation of #NINetVarInterface class.
+/// @file NetShrVarInterface.cpp Implementation of #NetShrVarInterface class.
 /// @author Freddie Akeroyd, STFC ISIS Facility, GB
 
 #include <stdio.h>
@@ -38,19 +38,19 @@
 
 #include "asynPortDriver.h"
 
-#include "NINetVarInterface.h"
+#include "NetShrVarInterface.h"
 #include "cnvconvert.h"
 
 #define MAX_PATH_LEN 256
 
-static const char *driverName="NINetVarInterface"; ///< Name of driver for use in message printing 
+static const char *driverName="NetShrVarInterface"; ///< Name of driver for use in message printing 
 
 /// An STL exception object encapsulating a shared variable error message
-class NINetVarException : public std::runtime_error
+class NetShrVarException : public std::runtime_error
 {
 public:
-	explicit NINetVarException(const std::string& message) : std::runtime_error(message) { }
-	explicit NINetVarException(const std::string& function, int code) : std::runtime_error(ni_message(function, code)) { }
+	explicit NetShrVarException(const std::string& message) : std::runtime_error(message) { }
+	explicit NetShrVarException(const std::string& function, int code) : std::runtime_error(ni_message(function, code)) { }
 private:
 	static std::string ni_message(const std::string& function, int code)
 	{
@@ -61,7 +61,7 @@ private:
 #define ERROR_CHECK(__func, __code) \
     if (__code < 0) \
 	{ \
-	    throw NINetVarException(__func, __code); \
+	    throw NetShrVarException(__func, __code); \
 	}
 
 /// connection status of a network shared variable
@@ -181,17 +181,17 @@ struct NvItem
 /// Stores information to be passed back via a shared variable callback on a subscriber connection
 struct CallbackData
 {
-	NINetVarInterface* intf;
+	NetShrVarInterface* intf;
     std::string nv_name;
     int param_index;
-	CallbackData(NINetVarInterface* intf_, const std::string& nv_name_, int param_index_) : intf(intf_), nv_name(nv_name_), param_index(param_index_) { } 
+	CallbackData(NetShrVarInterface* intf_, const std::string& nv_name_, int param_index_) : intf(intf_), nv_name(nv_name_), param_index(param_index_) { } 
 };
 
 static void CVICALLBACK DataCallback (void * handle, CNVData data, void * callbackData);
 static void CVICALLBACK StatusCallback (void * handle, CNVConnectionStatus status, int error, void * callbackData);
 static void CVICALLBACK DataTransferredCallback(void * handle, int error, void * callbackData);
 
-void NINetVarInterface::connectVars()
+void NetShrVarInterface::connectVars()
 {
 	int error, running;
 	CallbackData* cb_data;
@@ -262,7 +262,7 @@ static void CVICALLBACK DataTransferredCallback(void * handle, int error, void *
 }
 
 /// called when data has been transferred to the variable
-void NINetVarInterface::dataTransferredCallback (void * handle, int error, CallbackData* cb_data)
+void NetShrVarInterface::dataTransferredCallback (void * handle, int error, CallbackData* cb_data)
 {
 	if (error < 0)
 	{
@@ -283,7 +283,7 @@ static void CVICALLBACK DataCallback (void * handle, CNVData data, void * callba
 }
 
 /// called when new data is available on a subscriber connection
-void NINetVarInterface::dataCallback (void * handle, CNVData data, CallbackData* cb_data)
+void NetShrVarInterface::dataCallback (void * handle, CNVData data, CallbackData* cb_data)
 {
 //    std::cerr << "dataCallback: index " << cb_data->param_index << std::endl; 
     try
@@ -301,7 +301,7 @@ void NINetVarInterface::dataCallback (void * handle, CNVData data, CallbackData*
 }
 
 template<typename T>
-void NINetVarInterface::updateParamValue(int param_index, T val, bool do_asyn_param_callbacks)
+void NetShrVarInterface::updateParamValue(int param_index, T val, bool do_asyn_param_callbacks)
 {
 	const char *paramName = NULL;
 	m_driver->getParamName(param_index, &paramName);
@@ -330,7 +330,7 @@ void NINetVarInterface::updateParamValue(int param_index, T val, bool do_asyn_pa
 }
 
 template<typename T,typename U>
-void NINetVarInterface::updateParamArrayValueImpl(int param_index, T* val, size_t nElements)
+void NetShrVarInterface::updateParamArrayValueImpl(int param_index, T* val, size_t nElements)
 {
 	const char *paramName = NULL;
 	m_driver->getParamName(param_index, &paramName);
@@ -349,7 +349,7 @@ void NINetVarInterface::updateParamArrayValueImpl(int param_index, T* val, size_
 }
 
 template<typename T>
-void NINetVarInterface::updateParamArrayValue(int param_index, T* val, size_t nElements)
+void NetShrVarInterface::updateParamArrayValue(int param_index, T* val, size_t nElements)
 {
 	const char *paramName = NULL;
 	m_driver->getParamName(param_index, &paramName);
@@ -382,7 +382,7 @@ void NINetVarInterface::updateParamArrayValue(int param_index, T* val, size_t nE
 }
 
 template <typename T> 
-void NINetVarInterface::readArrayValue(const char* paramName, T* value, size_t nElements, size_t* nIn)
+void NetShrVarInterface::readArrayValue(const char* paramName, T* value, size_t nElements, size_t* nIn)
 {
 	std::vector<char>& array_data =  m_params[paramName]->array_data;
 	size_t n = array_data.size() / sizeof(T);
@@ -395,7 +395,7 @@ void NINetVarInterface::readArrayValue(const char* paramName, T* value, size_t n
 }
 
 template<CNVDataType cnvType>
-void NINetVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, bool do_asyn_param_callbacks)
+void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, bool do_asyn_param_callbacks)
 {
 	if (nDims == 0)
 	{
@@ -424,7 +424,7 @@ void NINetVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDat
 	}
 }
 
-void NINetVarInterface::updateParamCNV (int param_index, CNVData data, bool do_asyn_param_callbacks)
+void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_asyn_param_callbacks)
 {
 	unsigned int	nDims;
 	unsigned int	serverError;
@@ -553,7 +553,7 @@ static void CVICALLBACK StatusCallback (void * handle, CNVConnectionStatus statu
 }
 
 /// called when status of a network shared variable changes
-void NINetVarInterface::statusCallback (void * handle, CNVConnectionStatus status, int error, CallbackData* cb_data)
+void NetShrVarInterface::statusCallback (void * handle, CNVConnectionStatus status, int error, CallbackData* cb_data)
 {
 	if (error < 0)
 	{
@@ -569,12 +569,12 @@ static epicsThreadOnceId onceId = EPICS_THREAD_ONCE_INIT;
 
 static void initCV(void*)
 {
-    char* dummy_argv[2] = { "NINetVarInterface", NULL };
+    char* dummy_argv[2] = { "NetShrVarInterface", NULL };
 	if (InitCVIRTE (0, dummy_argv, 0) == 0)
 		throw std::runtime_error("InitCVIRTE");
 }
 
-void NINetVarInterface::DomFromCOM()
+void NetShrVarInterface::DomFromCOM()
 {
 	m_pxmldom = NULL;
 	CoInitializeEx(NULL, COINIT_MULTITHREADED);
@@ -598,7 +598,7 @@ void NINetVarInterface::DomFromCOM()
 /// \param[in] configSection @copydoc initArg1
 /// \param[in] configFile @copydoc initArg2
 /// \param[in] options @copydoc initArg4
-NINetVarInterface::NINetVarInterface(const char *configSection, const char* configFile, int options) : 
+NetShrVarInterface::NetShrVarInterface(const char *configSection, const char* configFile, int options) : 
 				m_configSection(configSection), m_options(options)		
 {
 	epicsThreadOnce(&onceId, initCV, NULL);
@@ -622,9 +622,9 @@ NINetVarInterface::NINetVarInterface(const char *configSection, const char* conf
 }
 
 // need to be careful here as might get called at wrong point. May need to check with driver.
-void NINetVarInterface::epicsExitFunc(void* arg)
+void NetShrVarInterface::epicsExitFunc(void* arg)
 {
-//	NINetVarInterface* netvarint = static_cast<NINetVarInterface*>(arg);
+//	NetShrVarInterface* netvarint = static_cast<NetShrVarInterface*>(arg);
 //	if (netvarint == NULL)
 //	{
 //		return;
@@ -635,11 +635,11 @@ void NINetVarInterface::epicsExitFunc(void* arg)
     CNVFinish();
 }
 
-long NINetVarInterface::nParams()
+long NetShrVarInterface::nParams()
 {
 	long n = 0;
 	char control_name_xpath[MAX_PATH_LEN];
-	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/ninetvar/section[@name='%s']/param", m_configSection.c_str());
+	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/NetShrvar/section[@name='%s']/param", m_configSection.c_str());
 	IXMLDOMNodeList* pXMLDomNodeList = NULL;
 	HRESULT hr = m_pxmldom->selectNodes(_bstr_t(control_name_xpath), &pXMLDomNodeList);
 	if (SUCCEEDED(hr) && pXMLDomNodeList != NULL)
@@ -650,7 +650,7 @@ long NINetVarInterface::nParams()
 	return n;
 }
 
-void NINetVarInterface::createParams(asynPortDriver* driver)
+void NetShrVarInterface::createParams(asynPortDriver* driver)
 {
     static const char* functionName = "createParams";
     m_driver = driver;
@@ -699,11 +699,11 @@ void NINetVarInterface::createParams(asynPortDriver* driver)
 	connectVars();
 }
 
-void NINetVarInterface::getParams()
+void NetShrVarInterface::getParams()
 {
 	m_params.clear();
 	char control_name_xpath[MAX_PATH_LEN];
-	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/ninetvar/section[@name='%s']/param", m_configSection.c_str());
+	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/NetShrvar/section[@name='%s']/param", m_configSection.c_str());
 	IXMLDOMNodeList* pXMLDomNodeList = NULL;
 	HRESULT hr = m_pxmldom->selectNodes(_bstr_t(control_name_xpath), &pXMLDomNodeList);
 	if (FAILED(hr) || pXMLDomNodeList == NULL)
@@ -798,7 +798,7 @@ void NINetVarInterface::getParams()
 }
 
 template <>
-void NINetVarInterface::setValue(const char* param, const std::string& value)
+void NetShrVarInterface::setValue(const char* param, const std::string& value)
 {
     ScopedCNVData cvalue;
 	int status = CNVCreateScalarDataValue(&cvalue, CNVString, value.c_str());
@@ -807,7 +807,7 @@ void NINetVarInterface::setValue(const char* param, const std::string& value)
 }
 
 template <typename T>
-void NINetVarInterface::setValue(const char* param, const T& value)
+void NetShrVarInterface::setValue(const char* param, const T& value)
 {
     ScopedCNVData cvalue;
 	int status = CNVCreateScalarDataValue(&cvalue, static_cast<CNVDataType>(C2CNV<T>::nvtype), value);
@@ -816,7 +816,7 @@ void NINetVarInterface::setValue(const char* param, const T& value)
 }
 
 template <typename T>
-void NINetVarInterface::setArrayValue(const char* param, const T* value, size_t nElements)
+void NetShrVarInterface::setArrayValue(const char* param, const T* value, size_t nElements)
 {
     ScopedCNVData cvalue;
 	size_t dimensions[1] = { nElements };
@@ -825,7 +825,7 @@ void NINetVarInterface::setArrayValue(const char* param, const T* value, size_t 
 	setValueCNV(param, cvalue);
 }
 
-void NINetVarInterface::setValueCNV(const std::string& name, CNVData value)
+void NetShrVarInterface::setValueCNV(const std::string& name, CNVData value)
 {
     int wait_ms = CNVWaitForever/*CNVDoNotWait*/, b_wait_ms = CNVDoNotWait/*CNVWaitForever*/;
 	NvItem* item = m_params[name];
@@ -850,7 +850,7 @@ void NINetVarInterface::setValueCNV(const std::string& name, CNVData value)
 }
 
 // update values from buffered subscribers
-void NINetVarInterface::updateValues()
+void NetShrVarInterface::updateValues()
 {
     CNVBufferDataStatus dataStatus;
 	int status;
@@ -886,11 +886,11 @@ void NINetVarInterface::updateValues()
 }
 
 /// Helper for EPICS driver report function
-void NINetVarInterface::report(FILE* fp, int details)
+void NetShrVarInterface::report(FILE* fp, int details)
 {
 	fprintf(fp, "XML ConfigFile: \"%s\"\n", m_configFile.c_str());
 	fprintf(fp, "XML ConfigFile section: \"%s\"\n", m_configSection.c_str());
-	fprintf(fp, "NINetVarConfigure() Options: %d\n", m_options);
+	fprintf(fp, "NetShrVarConfigure() Options: %d\n", m_options);
 	for(params_t::iterator it=m_params.begin(); it != m_params.end(); ++it)
 	{
 		NvItem* item = it->second;
@@ -900,19 +900,19 @@ void NINetVarInterface::report(FILE* fp, int details)
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
-template void NINetVarInterface::setValue(const char* param, const double& value);
-template void NINetVarInterface::setValue(const char* param, const int& value);
+template void NetShrVarInterface::setValue(const char* param, const double& value);
+template void NetShrVarInterface::setValue(const char* param, const int& value);
 
-template void NINetVarInterface::setArrayValue(const char* param, const double* value, size_t nElements);
-template void NINetVarInterface::setArrayValue(const char* param, const float* value, size_t nElements);
-template void NINetVarInterface::setArrayValue(const char* param, const int* value, size_t nElements);
-template void NINetVarInterface::setArrayValue(const char* param, const short* value, size_t nElements);
-template void NINetVarInterface::setArrayValue(const char* param, const char* value, size_t nElements);
+template void NetShrVarInterface::setArrayValue(const char* param, const double* value, size_t nElements);
+template void NetShrVarInterface::setArrayValue(const char* param, const float* value, size_t nElements);
+template void NetShrVarInterface::setArrayValue(const char* param, const int* value, size_t nElements);
+template void NetShrVarInterface::setArrayValue(const char* param, const short* value, size_t nElements);
+template void NetShrVarInterface::setArrayValue(const char* param, const char* value, size_t nElements);
 
-template void NINetVarInterface::readArrayValue(const char* paramName, double* value, size_t nElements, size_t* nIn);
-template void NINetVarInterface::readArrayValue(const char* paramName, float* value, size_t nElements, size_t* nIn);
-template void NINetVarInterface::readArrayValue(const char* paramName, int* value, size_t nElements, size_t* nIn);
-template void NINetVarInterface::readArrayValue(const char* paramName, short* value, size_t nElements, size_t* nIn);
-template void NINetVarInterface::readArrayValue(const char* paramName, char* value, size_t nElements, size_t* nIn);
+template void NetShrVarInterface::readArrayValue(const char* paramName, double* value, size_t nElements, size_t* nIn);
+template void NetShrVarInterface::readArrayValue(const char* paramName, float* value, size_t nElements, size_t* nIn);
+template void NetShrVarInterface::readArrayValue(const char* paramName, int* value, size_t nElements, size_t* nIn);
+template void NetShrVarInterface::readArrayValue(const char* paramName, short* value, size_t nElements, size_t* nIn);
+template void NetShrVarInterface::readArrayValue(const char* paramName, char* value, size_t nElements, size_t* nIn);
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */

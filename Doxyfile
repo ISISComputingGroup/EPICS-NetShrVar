@@ -26,7 +26,7 @@
 # title of most generated pages and in a few other places.
 # The default value is: My Project.
 
-PROJECT_NAME           = NINetVar
+PROJECT_NAME           = NetShrVar
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewer a
@@ -43,18 +43,18 @@ PROJECT_BRIEF          = "An EPICS support module to export National Instruments
 # ISIS: list your IOC/module "src", "db" and "iocBoot" directories
 
 INPUT                  = . \
-                         NINetVarApp/src \
-                         TestNINetVarApp/src
+                         NetShrVarApp/src \
+                         TestNetShrVarApp/src
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or directories
 # that contain example code fragments that are included (see the \include
 # command).
 
 EXAMPLE_PATH           = . \
-                         iocBoot/iocTestNINetVar \
-                         NINetVarApp/src \
-                         TestNINetVarApp/Db \
-                         TestNINetVarApp/src
+                         iocBoot/iocTestNetShrVar \
+                         NetShrVarApp/src \
+                         TestNetShrVarApp/Db \
+                         TestNetShrVarApp/src
 
 # The TAGFILES tag can be used to specify one or more tag files. For each tag
 # file the location of the external documentation should be added. The format of
@@ -80,6 +80,6 @@ TAGFILES               =
 # ISIS: use the name format <iocname>_IOC.tags or <modulename>_SUPPORT.tags as appropriate 
 # ISIS: also use capitals except for .tags suffix
 
-GENERATE_TAGFILE       = NINetVar_SUPPORT.tags
+GENERATE_TAGFILE       = NetShrVar_SUPPORT.tags
 
 #QUIET = NO

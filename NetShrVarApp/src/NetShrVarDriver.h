@@ -5,15 +5,15 @@
 * in the file LICENSE.txt that is included with this distribution. 
 \*************************************************************************/ 
 
-/// @file NINetVarDriver.h Header for #NINetVarDriver class.
+/// @file NetShrVarDriver.h Header for #NetShrVarDriver class.
 /// @author Freddie Akeroyd, STFC ISIS Facility, GB
 
-#ifndef NINETVARDRIVER_H
-#define NINETVARDRIVER_H
+#ifndef NETSHRVARDRIVER_H
+#define NETSHRVARDRIVER_H
 
 #include "asynPortDriver.h"
 
-class NINetVarInterface;
+class NetShrVarInterface;
 
 /// An STL exception describing a Win32 Structured Exception. 
 /// Code needs to be compiled with /EHa if you wish to use this via _set_se_translator().
@@ -29,10 +29,10 @@ private:
 
 
 /// EPICS Asyn port driver class. 
-class NINetVarDriver : public asynPortDriver 
+class NetShrVarDriver : public asynPortDriver 
 {
 public:
-	NINetVarDriver(NINetVarInterface* netvarint, int poll_ms, const char *portName);
+	NetShrVarDriver(NetShrVarInterface* netvarint, int poll_ms, const char *portName);
 
 	// These are the methods that we override from asynPortDriver
 	virtual asynStatus writeInt32(asynUser *pasynUser, epicsInt32 value);
@@ -59,7 +59,7 @@ public:
 	bool shuttingDown() { return m_shutting_down; }
 
 private:
-	NINetVarInterface* m_netvarint;
+	NetShrVarInterface* m_netvarint;
 	int m_poll_ms;
 	bool m_shutting_down;
 
@@ -67,7 +67,7 @@ private:
 	template<typename T> asynStatus writeArrayValue(asynUser *pasynUser, const char* functionName, T* value, size_t nElements);
 	template<typename T> asynStatus readArrayValue(asynUser *pasynUser, const char* functionName, T *value, size_t nElements, size_t *nIn);
 
-	static void NINetVarTask(void* arg);
+	static void NetShrVarTask(void* arg);
 };
 
-#endif /* NINETVARDRIVER_H */
+#endif /* NETSHRVARDRIVER_H */

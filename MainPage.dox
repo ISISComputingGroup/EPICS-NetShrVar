@@ -1,33 +1,38 @@
 <HTML>
-/** @mainpage NINetVar (NI Network Shared Variable EPICS Support Module)
+/** @mainpage NetShrVar (Network Shared Variable EPICS Support Module)
 
-NINetVar is an <A HREF="http://www.aps.anl.gov/epics/">EPICS</A> support module   
-that can export National Instruments (NI) <A HREF="http://www.ni.com/white-paper/5484/en/">Network Shared Variables</A>  
+NetShrVar is an <A HREF="http://www.aps.anl.gov/epics/">EPICS</A> support module   
+that can export National Instruments <A HREF="http://www.ni.com/white-paper/5484/en/">Network Shared Variables</A>  
 as EPICS process variables. The program can be run on either the Microsoft Windows or Linux operating systems. 
 
-Network Shared Variables (NSV) are exported by many peices of NI equipment - use the "NI Distributed System manager" for a list of what is 
-available on your network. In our case CompactRIO (CRIO) was the target system. NINetVar also provides an alternative 
-to <A HREF="http://epics.isis.stfc.ac.uk/doxygen/lvDCOM/html/">lvDCOM</A> for EPICS enabling LabVIEW applications. Key difference are:
+Network Shared Variables (NSV) are exported by many types of National Instruments equipment - use the "Distributed System manager" for a list of what is 
+available on your network. NetShrVar can provide an alternative 
+to <A HREF="http://epics.isis.stfc.ac.uk/wiki/LVDCOM">lvDCOM</A> for EPICS enabling LabVIEW applications. Key difference are:
 
-- lvDCOM does not require a LabVIEW Virtual Instrument (VI) to be modified, but is restricted to accessing front panel object and must poll for value changes
-- lvDCOM uses DCOM (ActiveX) for communication, hence can only access LabVIEW instances running on Microsoft Windows computers. NINetVar uses the 
+- lvDCOM does not require a LabVIEW(TM) Software Virtual Instrument (VI) to be modified, but is restricted to accessing front panel object and must poll for value changes
+- lvDCOM uses DCOM (ActiveX) for communication, hence can only access LabVIEW instances running on Microsoft Windows computers. NetShrVar uses the 
 LabWindows/CVI Network Variable Library http://zone.ni.com/reference/en-XX/help/370051Y-01/TOC109.htm which
 is available on both Linux and Windows. 
-- NINetVar requires the relevant shared variables to be created if they do not exist, but access is more "event driven" as shared variables 
+- NetShrVar requires the relevant shared variables to be created if they do not exist, but access is more "event driven" as shared variables 
 are a publish/subscribe system. A shared variable can easily be bound to an existing LabVIEW front panel object by going to its <i>Properties ... data binding</i> tab. 
 Shared variables can also be created and accessed from block diagrams.  
 
+So though NetShrVar is targeted at 
 If you are using LabVIEW projects, you can create and deploy persistent network shared variables via the variable manager.
+
+In some cases it is possible to <A HREF="http://www.ni.com/white-paper/14149/en/">deploy EPICS variables directly from LabVIEW</A>, however
+this may require the purchase of additional software, such as the <A HREF="http://www.ni.com/labview/labviewdsc/">DSC module</A>. 
+In addition the LabVIEW EPICS I/O Server, at time of writing, does not provide full EPICS IOC functionality. 
 
 </P><P>
 
-NINetVar is a server in that it exports information to the EPICS environment, if you wish to instead display 
+NetShrVar is a server in that it exports information to the EPICS environment, if you wish to instead display 
 existing EPICS process variables on LabVIEW front panels then 
 <A HREF="http://www-csr.bessy.de/control/SoftDist/CA_Lab/">CA Lab</A> is the program to use.
 
 </P>
 
-Features of NINetVar are:
+Features of NetShrVar are:
 <UL>
 <LI> Access shared variables as subscriber, writer, buffered writer or buffered reader
 <LI> Handles both simple types and arrays of simple types. For array data types, the EPICS PV bound to an NSV must be of the same data type byte size (16 or 32bit etc), 
@@ -35,21 +40,19 @@ but can differ in sign. Simple single value types are automatically cast (double
 <LI> Read (but not write to) "struct" type network variables. A separate PV of one of the above types is bound to each individual struct field of interest.
 </UL>
 
-
-
 </P><P>
 
-The NINetVar software is an EPICS
+The NetShrVar software is an EPICS
 <A HREF="http://www.aps.anl.gov/epics/modules/soft/asyn/">Asyn driver</A> that 
 uses NI-PSP to communicate with equipment. Variables 
 are mapped to asyn driver parameters via an XML configuration file @link netvarconfig.xml @endlink,
 each "section" in the XML file being accessed via a specified asyn "port name". These driver parameters 
-can then be linked to process variables via @link TestNINetVar.db @endlink.
+can then be linked to process variables via @link TestNetShrVar.db @endlink.
 
 </P><P>
 
 The syntax of the XML configuration file is described in the 
-comments in @link netvarconfig.xml @endlink and schema file @link NINetVarConfig.xsd @endlink .
+comments in @link netvarconfig.xml @endlink and schema file @link NetShrVarConfig.xsd @endlink .
 An initial XML file can first be generated via @link netvarconfig2db.xsl @endlink by the procedure 
 below and then adjusted accordingly. 
 
@@ -59,12 +62,12 @@ See the doc directory of the distribution for further information.
 
 <H2>Download</H2>
 
-Source code and a pre-build Windows binary of NINetVar can be downloaded from the
+Source code and a pre-build Windows binary of NetShrVar can be downloaded from the
 <A HREF="http://epics.isis.stfc.ac.uk/">ISIS EPICS homepage</A>.
 
 <P>
 
-It is not necessary to create a new NINetVar IOC to talk to a different
+It is not necessary to create a new NetShrVar IOC to talk to a different
 set of VIs. Everything is configured from @link st.cmd @endlink via @link netvarconfig.xml @endlink
 and so the same executable can be re-used. The @link netvarconfig.xml @endlink file supports
 multiple config section and so can also be shared between IOCs.     
@@ -86,12 +89,12 @@ sed -i -e 's/\\r$//' windows2unix_file         # dos2unix -o (in place conversio
 
 <P>
 
-Building NINetVar from source requires the  
+Building NetShrVar from source requires the  
 Microsoft Visual Studio C++ compiler 
-A pre-built win32 NINetVar binary can, however, 
+A pre-built win32 NetShrVar binary can, however, 
 be downloaded from http://epics.isis.stfc.ac.uk/ and this does not require any additional 
 Microsoft tools/libraries to be installed.
-The LabWindwos/CVI runtime modules is required on the machine running NINetVar.
+The LabWindwos/CVI runtime modules is required on the machine running NetShrVar.
 
 </P><P>
 
@@ -106,24 +109,24 @@ you need the <b>xsltproc</b> program in your PATH - see requirements section abo
 
 </P><P>
 
- Then to generate the initial NINetVar XML input file run:
+ Then to generate the initial NetShrVar XML input file run:
 <PRE>
 xsltproc netvarconfig2db.xsl netvarconfig.xml > epics.db
 </PRE>
  You can use EPICS macros
 known to the IOC like TOP as part of the path. An XML 
-schema definition file <b>@link NINetVarConfig.xsd @endlink</b> is also provided and, if 
+schema definition file <b>@link NetShrVarConfig.xsd @endlink</b> is also provided and, if 
 present in the same directory as <b>@link netvarconfig.xml @endlink</b>, should be picked up 
 automatically by XML aware editors to make editing easier.  The resulting <b>
-@link TestNINetVar.db @endlink</b> can then be adjusted as appropriate
+@link TestNetShrVar.db @endlink</b> can then be adjusted as appropriate
 </P>
 
 <H2>Running Example</H2>
 
-First Open "TestNINetVarAPP/src/example.lvproj" then right click on  example.lvlib  and deploy all to publish 
+First Open "TestNetShrVarAPP/src/example.lvproj" then right click on  example.lvlib  and deploy all to publish 
 example network shared variables from  example.vi   These variables are all in the "example" process 
 namespace and so are prefixed //localhost/example
-After deployment, they should be visible in the NI Distributed system manager.
+After deployment, they should be visible in the National Instruments Distributed system manager software.
 
 The variables are all bound to controls/indicators on the front panel of "example.vi" - see "Data Binding" from the 
 front panel "properties" of each control/indicator
@@ -131,7 +134,7 @@ front panel "properties" of each control/indicator
 Now load example.vi into LabVIEW and start it running. The triangle next to each front panel object will turn green if the connection to
 the bound shared variable worked from LabVIEW.
 
-Open a command prompt and change directory to iocBoot/iocTestNINetVar
+Open a command prompt and change directory to iocBoot/iocTestNetShrVar
 Check the definition of TOP in the envPaths file - it should point to the top of your distribution. Any other paths
 present in envPaths are not important. Now type:
 <PRE>
@@ -192,13 +195,13 @@ new features/improvements, please contact Freddie Akeroyd (freddie.akeroyd@stfc.
 
 <H2>License</H2>
 
-NINetVar is Copyright (c) 2013 <A HREF="http://www.isis.stfc.ac.uk/">STFC ISIS Facility, Rutherford Appleton Laboratory, GB</A>. All rights reserved.<BR />
+NetShrVar is Copyright (c) 2013 <A HREF="http://www.isis.stfc.ac.uk/">STFC ISIS Facility, Rutherford Appleton Laboratory, GB</A>. All rights reserved.<BR />
 It is distributed under the <A HREF="http://www.aps.anl.gov/epics/license/index.php">EPICS Open License</A> 
 as detailed in the included LICENSE.txt file.
 
 <P>
 
-When distributed in binary form, NINetVar will have been linked against  
+When distributed in binary form, NetShrVar will have been linked against  
 the <A HREF="http://www.aps.anl.gov/epics/base/">EPICS BASE</A>,
 <A HREF="http://www.aps.anl.gov/bcda/synApps/autosave/autosave.html">autosave</A>  
 and <A HREF="http://www.aps.anl.gov/epics/modules/soft/asyn/">ASYN driver</A> software. 
@@ -230,6 +233,9 @@ reserved.
 Copyright (c) 2004 by Danfysik and Cosylab (Danfysik has funded the work
 performed by Cosylab).
 </PRE> 
+
+LabVIEW is a trademark of National Instruments. Neither STFC, nor any software programs or other 
+goods or services offered by STFC, are affiliated with, endorsed by, or sponsored by National Instruments. 
 
 </P>
 

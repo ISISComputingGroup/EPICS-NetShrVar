@@ -7,15 +7,15 @@
     # $HeadURL$
     ########### SVN repository information ###################
 	
-	@file NiNetVarConfig.xsd XML schema for NiNetVar configuration files such as @link netvarconfig.xml @endlink
+	@file NetShrVarConfig.xsd XML schema for NetShrVar configuration files such as @link netvarconfig.xml @endlink
 	@author Freddie Akeroyd, STFC ISIS Facility, UK
 
 -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	targetNamespace="http://epics.isis.rl.ac.uk/NiNetVarConfig/1.0"
-	xmlns="http://epics.isis.rl.ac.uk/NiNetVarConfig/1.0"
+	targetNamespace="http://epics.isis.rl.ac.uk/NetShrVarConfig/1.0"
+	xmlns="http://epics.isis.rl.ac.uk/NetShrVarConfig/1.0"
 	elementFormDefault="qualified">
-  <xs:element name="ninetvar">
+  <xs:element name="netvar">
     <xs:complexType>
       <xs:sequence>
         <xs:element ref="section"/>
@@ -23,7 +23,7 @@
     </xs:complexType>
   </xs:element>
 
-  <!-- the section name will be mapped (via NINetVarConfigure()) to an asyn driver port name that can then be specified in an EPICS record -->
+  <!-- the section name will be mapped (via NetShrVarConfigure()) to an asyn driver port name that can then be specified in an EPICS record -->
   <xs:element name="section">
     <xs:complexType>
       <xs:sequence>
