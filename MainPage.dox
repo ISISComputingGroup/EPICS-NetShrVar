@@ -5,7 +5,7 @@ NetShrVar is an <A HREF="http://www.aps.anl.gov/epics/">EPICS</A> support module
 that can export National Instruments <A HREF="http://www.ni.com/white-paper/5484/en/">Network Shared Variables</A>  
 as EPICS process variables. The program can be run on either the Microsoft Windows or Linux operating systems. 
 
-Network Shared Variables (NSV) are exported by many types of National Instruments equipment - use the "Distributed System manager" for a list of what is 
+Network Shared Variables (NSV) are exported by many types of National Instruments equipment - use the "Distributed System Manager" for a list of what is 
 available on your network. NetShrVar can provide an alternative 
 to <A HREF="http://epics.isis.stfc.ac.uk/wiki/LVDCOM">lvDCOM</A> for EPICS enabling LabVIEW applications. Key difference are:
 
@@ -17,7 +17,7 @@ is available on both Linux and Windows.
 are a publish/subscribe system. A shared variable can easily be bound to an existing LabVIEW front panel object by going to its <i>Properties ... data binding</i> tab. 
 Shared variables can also be created and accessed from block diagrams.  
 
-So though NetShrVar is targeted at 
+So though NetShrVar is targeted more widely, it is potentially a useful tool for use with LabVIEW software.  
 If you are using LabVIEW projects, you can create and deploy persistent network shared variables via the variable manager.
 
 In some cases it is possible to <A HREF="http://www.ni.com/white-paper/14149/en/">deploy EPICS variables directly from LabVIEW</A>, however

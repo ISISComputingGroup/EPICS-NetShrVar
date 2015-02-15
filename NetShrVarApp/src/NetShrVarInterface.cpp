@@ -639,7 +639,7 @@ long NetShrVarInterface::nParams()
 {
 	long n = 0;
 	char control_name_xpath[MAX_PATH_LEN];
-	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/NetShrvar/section[@name='%s']/param", m_configSection.c_str());
+	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
 	IXMLDOMNodeList* pXMLDomNodeList = NULL;
 	HRESULT hr = m_pxmldom->selectNodes(_bstr_t(control_name_xpath), &pXMLDomNodeList);
 	if (SUCCEEDED(hr) && pXMLDomNodeList != NULL)
@@ -703,7 +703,7 @@ void NetShrVarInterface::getParams()
 {
 	m_params.clear();
 	char control_name_xpath[MAX_PATH_LEN];
-	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/NetShrvar/section[@name='%s']/param", m_configSection.c_str());
+	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
 	IXMLDOMNodeList* pXMLDomNodeList = NULL;
 	HRESULT hr = m_pxmldom->selectNodes(_bstr_t(control_name_xpath), &pXMLDomNodeList);
 	if (FAILED(hr) || pXMLDomNodeList == NULL)
