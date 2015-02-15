@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    @file netvarconfig.xml Example NiNetVar driver configuration file. Loaded at IOC boot time in @link st.cmd @endlink via e.g.
+	
+	    NINetVarConfigure("ex1", "sec1", "$(TOP)/TestNINetVarApp/src/netvarconfig.xml", 100)
+
+    @author Freddie Akeroyd, STFC ISIS facility, UK (freddie.akeroyd at stfc.ac.uk)
+	
+    $LastChangedRevision$: 
+    $LastChangedBy$: 
+    $LastChangedDate$:  
+    $HeadURL$:
+	
+-->
+<ninetvar 
+  xmlns="http://epics.isis.rl.ac.uk/NiNetVarConfig/1.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://epics.isis.rl.ac.uk/NiNetVarConfig/1.0 ../../NiNetVarApp/src/NiNetVarConfig.xsd">
+
+   <!-- this name will be mapped (via NiNetVarConfigure()) to an asyn driver port name that can then be specified in an EPICS db record -->
+   <section name="sec1"> 
+
+	  <!--
+	      <param> defines as asyn driver parameter "name" that can be specified in an epics record to access data.		  
+		  "access" is a comma separated list of how the shared variable is accessed: R (reader), BR (buffered reader), W (writer), BW (buffered writer)
+		  "type" is the asyn parameter type - it does not need to be identical to the shared variable type, but
+		          must be compatible (i.e. numeric if shared variable is numeric). 
+		          Valid values are: int32, float64, boolean, string, float32array, float64array, int8array, int16array, int32array - see @link NiNetVarConfig.xsd @endlink
+		  "netvar" is the path to the shared variable - you can use / rather than \
+		  "fval" and "tval" are only used for boolean type, they are the strings to be displayed for false and true values
+		  "field" is only used for a structure type network shared variable, it indicates the structure element to access. Structures are read-only.
+	  -->
+	  <param name="cont1" type="float64" access="BR,BW" netvar="//localhost/example/some_control" /> 
+	
+	  <param name="icont1" type="int32" access="R,W" netvar="//localhost/example/some_control" /> 
+
+      <param name="ind1" type="int32" access="BR,BW" netvar="//localhost/example/some_indicator" />
+
+	  <param name="strcont1" type="string" access="BR,BW" netvar="//localhost/example/some_string" /> 
+	 
+	  <param name="bool1" type="boolean" fval="off" tval="on" access="BR,BW" netvar="//localhost/example/some_bool" /> 
+	  
+	  <param name="array1" type="float64array" access="BR,BW" netvar="//localhost/example/some_array" /> 
+
+	  <param name="struct1" type="float64" access="BR,BW" netvar="//localhost/example/some_struct" field="1" /> 
+
+	</section>
+  
+</ninetvar>

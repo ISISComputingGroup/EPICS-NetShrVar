@@ -1,0 +1,238 @@
+<HTML>
+/** @mainpage NINetVar (NI Network Shared Variable EPICS Support Module)
+
+NINetVar is an <A HREF="http://www.aps.anl.gov/epics/">EPICS</A> support module   
+that can export National Instruments (NI) <A HREF="http://www.ni.com/white-paper/5484/en/">Network Shared Variables</A>  
+as EPICS process variables. The program can be run on either the Microsoft Windows or Linux operating systems. 
+
+Network Shared Variables (NSV) are exported by many peices of NI equipment - use the "NI Distributed System manager" for a list of what is 
+available on your network. In our case CompactRIO (CRIO) was the target system. NINetVar also provides an alternative 
+to <A HREF="http://epics.isis.stfc.ac.uk/doxygen/lvDCOM/html/">lvDCOM</A> for EPICS enabling LabVIEW applications. Key difference are:
+
+- lvDCOM does not require a LabVIEW Virtual Instrument (VI) to be modified, but is restricted to accessing front panel object and must poll for value changes
+- lvDCOM uses DCOM (ActiveX) for communication, hence can only access LabVIEW instances running on Microsoft Windows computers. NINetVar uses the 
+LabWindows/CVI Network Variable Library http://zone.ni.com/reference/en-XX/help/370051Y-01/TOC109.htm which
+is available on both Linux and Windows. 
+- NINetVar requires the relevant shared variables to be created if they do not exist, but access is more "event driven" as shared variables 
+are a publish/subscribe system. A shared variable can easily be bound to an existing LabVIEW front panel object by going to its <i>Properties ... data binding</i> tab. 
+Shared variables can also be created and accessed from block diagrams.  
+
+If you are using LabVIEW projects, you can create and deploy persistent network shared variables via the variable manager.
+
+</P><P>
+
+NINetVar is a server in that it exports information to the EPICS environment, if you wish to instead display 
+existing EPICS process variables on LabVIEW front panels then 
+<A HREF="http://www-csr.bessy.de/control/SoftDist/CA_Lab/">CA Lab</A> is the program to use.
+
+</P>
+
+Features of NINetVar are:
+<UL>
+<LI> Access shared variables as subscriber, writer, buffered writer or buffered reader
+<LI> Handles both simple types and arrays of simple types. For array data types, the EPICS PV bound to an NSV must be of the same data type byte size (16 or 32bit etc), 
+but can differ in sign. Simple single value types are automatically cast (double to float, short to int, int to float)
+<LI> Read (but not write to) "struct" type network variables. A separate PV of one of the above types is bound to each individual struct field of interest.
+</UL>
+
+
+
+</P><P>
+
+The NINetVar software is an EPICS
+<A HREF="http://www.aps.anl.gov/epics/modules/soft/asyn/">Asyn driver</A> that 
+uses NI-PSP to communicate with equipment. Variables 
+are mapped to asyn driver parameters via an XML configuration file @link netvarconfig.xml @endlink,
+each "section" in the XML file being accessed via a specified asyn "port name". These driver parameters 
+can then be linked to process variables via @link TestNINetVar.db @endlink.
+
+</P><P>
+
+The syntax of the XML configuration file is described in the 
+comments in @link netvarconfig.xml @endlink and schema file @link NINetVarConfig.xsd @endlink .
+An initial XML file can first be generated via @link netvarconfig2db.xsl @endlink by the procedure 
+below and then adjusted accordingly. 
+
+</P>
+
+See the doc directory of the distribution for further information.
+
+<H2>Download</H2>
+
+Source code and a pre-build Windows binary of NINetVar can be downloaded from the
+<A HREF="http://epics.isis.stfc.ac.uk/">ISIS EPICS homepage</A>.
+
+<P>
+
+It is not necessary to create a new NINetVar IOC to talk to a different
+set of VIs. Everything is configured from @link st.cmd @endlink via @link netvarconfig.xml @endlink
+and so the same executable can be re-used. The @link netvarconfig.xml @endlink file supports
+multiple config section and so can also be shared between IOCs.     
+</P>
+
+<H2>Requirements</H2>
+
+The xsltproc program is required to generate an initial EPICS db file from the XML configuration file.  
+On windows it can be downloaded from http://gnuwin32.sourceforge.net/packages/libxslt.htm, alternatively these
+steps could be carried out on a Linux computer and the results transferred back to Windows.
+You may need to adjust line endings (&lt;CR&gt; &lt;-&gt; &lt;CR&gt;&lt;LF&gt;) on some of the input/output files. For this you
+can use the dos2unix and unix2dos programs or some of the following sed commands on Linux:
+<PRE>
+sed -e 's/$/\\r/' unix_file &gt; windows_file     # unix2dos equivalent
+sed -e 's/\\r$//' windows_file &gt; unix_file     # dos2unix equivalent
+sed -i -e 's/$/\\r/' unix2windows_file         # unix2dos -o (in place conversion) equivalent
+sed -i -e 's/\\r$//' windows2unix_file         # dos2unix -o (in place conversion) equivalent
+</PRE>
+
+<P>
+
+Building NINetVar from source requires the  
+Microsoft Visual Studio C++ compiler 
+A pre-built win32 NINetVar binary can, however, 
+be downloaded from http://epics.isis.stfc.ac.uk/ and this does not require any additional 
+Microsoft tools/libraries to be installed.
+The LabWindwos/CVI runtime modules is required on the machine running NINetVar.
+
+</P><P>
+
+To build from source, unpack the ZIP file, adjust configure/RELEASE 
+in the usual way to reflect your setup, then type make.
+
+</P>
+
+<H3>Automatically generate EPICS DB files</H3>
+
+you need the <b>xsltproc</b> program in your PATH - see requirements section above.
+
+</P><P>
+
+ Then to generate the initial NINetVar XML input file run:
+<PRE>
+xsltproc netvarconfig2db.xsl netvarconfig.xml > epics.db
+</PRE>
+ You can use EPICS macros
+known to the IOC like TOP as part of the path. An XML 
+schema definition file <b>@link NINetVarConfig.xsd @endlink</b> is also provided and, if 
+present in the same directory as <b>@link netvarconfig.xml @endlink</b>, should be picked up 
+automatically by XML aware editors to make editing easier.  The resulting <b>
+@link TestNINetVar.db @endlink</b> can then be adjusted as appropriate
+</P>
+
+<H2>Running Example</H2>
+
+First Open "TestNINetVarAPP/src/example.lvproj" then right click on  example.lvlib  and deploy all to publish 
+example network shared variables from  example.vi   These variables are all in the "example" process 
+namespace and so are prefixed //localhost/example
+After deployment, they should be visible in the NI Distributed system manager.
+
+The variables are all bound to controls/indicators on the front panel of "example.vi" - see "Data Binding" from the 
+front panel "properties" of each control/indicator
+
+Now load example.vi into LabVIEW and start it running. The triangle next to each front panel object will turn green if the connection to
+the bound shared variable worked from LabVIEW.
+
+Open a command prompt and change directory to iocBoot/iocTestNINetVar
+Check the definition of TOP in the envPaths file - it should point to the top of your distribution. Any other paths
+present in envPaths are not important. Now type:
+<PRE>
+    runIOC st.cmd
+</PRE>	
+this should start the IOC and you will finish with an epics> prompt. Check that no errors are reported. You can now type:
+<PRE>
+    asynReport
+</PRE>	
+to see all your connections to shared variables and
+<PRE>
+    dbl
+</PRE>	
+To see the EPICS process variables that have been created to connect to these. Process variables are the externally visible
+names and these are connected by the program to the asyn parameters displayed in asynReport above.
+
+You can read the value of a variable using the dbgf commandat the epics> IOC prompt:
+<PRE>
+    dbgf TEST:ind1_RBV
+</PRE>	
+
+or for a bit more detail using dbpr
+<PRE>
+    dbpr TEST:ind1_RBV
+</PRE>	
+
+Using the EPICS command line utilities, you should be able to type, in a separate cmd window to the running IOC above:
+<PRE>
+    camonitor TEST:bool1_RBV
+</PRE>	
+	
+and then toggle the button on example.vi and see it change. To alter the value via EPICS type e.g.
+<PRE>
+    caput TEST:bool1 off  
+</PRE>	
+
+(not that in epics a process variable is either read or write), we have used _RBV for "read back value" in our example db file)
+
+To see a rapidly changing variable try:
+<PRE>
+    camonitor TEST:ind1_RBV
+</PRE>	
+
+
+Rather than using a command line, you can also use various EPICS GUI client tools to check the process variable link. 
+One good one for LabVIEW based environments is CaLab  http://www-csr.bessy.de/control/SoftDist/CA_Lab/ 
+	
+<H2>TODO</H2>
+<UL>	
+<LI>propagate update timestamp from shared variable to EPICS - currently the time epics read the variable rather than when it changed is used</LI>
+</UL>
+
+
+<H2>Support</H2>
+
+If you need further help, or discover any problems, or have any suggestions for
+new features/improvements, please contact Freddie Akeroyd (freddie.akeroyd@stfc.ac.uk)
+
+<H2>License</H2>
+
+NINetVar is Copyright (c) 2013 <A HREF="http://www.isis.stfc.ac.uk/">STFC ISIS Facility, Rutherford Appleton Laboratory, GB</A>. All rights reserved.<BR />
+It is distributed under the <A HREF="http://www.aps.anl.gov/epics/license/index.php">EPICS Open License</A> 
+as detailed in the included LICENSE.txt file.
+
+<P>
+
+When distributed in binary form, NINetVar will have been linked against  
+the <A HREF="http://www.aps.anl.gov/epics/base/">EPICS BASE</A>,
+<A HREF="http://www.aps.anl.gov/bcda/synApps/autosave/autosave.html">autosave</A>  
+and <A HREF="http://www.aps.anl.gov/epics/modules/soft/asyn/">ASYN driver</A> software. 
+These works are covered by 
+licences detailed in the LICENSE_EPICS_BASE.txt, LICENSE_AUTOSAVE.txt 
+and LICENSE_ASYN.txt files contained within the distribution and the following
+copyright notices:
+<H3>EPICS BASE</H3>
+<PRE>
+Copyright (c) 1991-2011 UChicago Argonne LLC.
+Copyright (c) 1991-2006 The Regents of the University of California.
+Copyright (c) 2006-2011. Los Alamos National Security, LLC. Some of this
+material was produced under U.S. Government contract DE-AC52-06NA25396
+for Los Alamos National Laboratory (LANL), which is operated by Los Alamos
+National Security, LLC for the U.S. Department of Energy.
+</PRE> 
+<H3>AUTOSAVE</H3>
+<PRE>
+Copyright (c) 2005 University of Chicago and the Regents of the University of 
+California. All rights reserved.
+</PRE> 
+<H3>ASYN DRIVER</H3>
+<PRE>
+Copyright (c) 2002 University of Chicago, The Regents of the
+University of California, and Berliner Elektronenspeicherring
+Gesellschaft fuer Synchrotronstrahlung m.b.H. (BESSY) All rights
+reserved.
+
+Copyright (c) 2004 by Danfysik and Cosylab (Danfysik has funded the work
+performed by Cosylab).
+</PRE> 
+
+</P>
+
+*/
+<!-- $Id$ -->
+</HTML>

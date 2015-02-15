@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    ########### SVN repository information ###################
+    # $LastChangedDate$
+    # $LastChangedBy$
+    # $LastChangedRevision$
+    # $HeadURL$
+    ########### SVN repository information ###################
+	
+	@file NiNetVarConfig.xsd XML schema for NiNetVar configuration files such as @link netvarconfig.xml @endlink
+	@author Freddie Akeroyd, STFC ISIS Facility, UK
+
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	targetNamespace="http://epics.isis.rl.ac.uk/NiNetVarConfig/1.0"
+	xmlns="http://epics.isis.rl.ac.uk/NiNetVarConfig/1.0"
+	elementFormDefault="qualified">
+  <xs:element name="ninetvar">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="section"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- the section name will be mapped (via NINetVarConfigure()) to an asyn driver port name that can then be specified in an EPICS record -->
+  <xs:element name="section">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="param"/>
+      </xs:sequence>
+      <xs:attribute name="name" use="required" type="xs:NCName"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="allowedTypes">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="int32" />
+      <xs:enumeration value="float64" />
+      <xs:enumeration value="string" />
+      <xs:enumeration value="boolean" />
+      <xs:enumeration value="float32array" />
+      <xs:enumeration value="float64array" />
+      <xs:enumeration value="int8array" />
+      <xs:enumeration value="int16array" />
+      <xs:enumeration value="int32array" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!--
+	      <param> defines as asyn driver parameter that can be specified in an epics record to access data in the network shared variable.
+  -->
+  <xs:element name="param">
+    <xs:complexType>
+      <xs:attribute name="name" use="required" type="xs:NCName"/>
+      <xs:attribute name="type" use="required" type="allowedTypes"/>
+      <xs:attribute name="access" use="required" type="xs:string"/>
+      <xs:attribute name="netvar" use="required" type="xs:string"/>
+      <xs:attribute name="field" use="optional" type="xs:nonNegativeInteger"/><!--for struct type network variables, indicates the structure field to access-->
+      <xs:attribute name="fval" use="optional" type="xs:string"/><!-- for boolean, indictes the string representation of false-->
+      <xs:attribute name="tval" use="optional" type="xs:string"/><!-- for boolean, indictes the string representation of true-->
+    </xs:complexType>
+  </xs:element>
+  
+</xs:schema>
