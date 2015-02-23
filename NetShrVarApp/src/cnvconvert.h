@@ -258,33 +258,31 @@ static T* convertToPtr(U val)
 //   return static_cast<T*>(0);
 }
 
-/// default handles non-signed types
-template <typename T, bool is_signed>
+/// default handles non-signed types i.e. <T,false>
+template <typename T, bool is_unsigned>
 struct MakeSignedImpl
 {
     typedef typename T type;
 };
 
-/// specialisation for potentially signed types
+/// specialisation of MakeSignedImpl for signed types
 template <typename T>
 struct MakeSignedImpl<T,true>
 {
     typedef typename std::make_signed<T>::type type;
 };
 
-/// like std::make_signed but also handles bool,float etc.  
+/// like std::make_signed but also handles bool,float etc. types by passing them through rather than producing an error
 template <typename T>
 struct MakeSigned
 {
-    typedef typename MakeSignedImpl< T, std::is_signed<T>::value >::type type;
+    typedef typename MakeSignedImpl< T, std::is_unsigned<T>::value >::type type;
 };
-
 
 /// Types that differ only in sign are considered castable as epics asyn doesn't do unsigned data types for arrays
 template<typename T, typename U>
 static T* convertToPtr(U* val)
 {
-//	if ( typeid(std::make_signed<T>::type) == typeid(std::make_signed<U>::type) )
     if ( std::is_same< MakeSigned< std::remove_cv<T>::type >::type, MakeSigned< std::remove_cv<U>::type >::type >::value )
 	{
         return reinterpret_cast<T*>(val);
