@@ -27,7 +27,7 @@
 #include <userint.h>
 #include <cvinetv.h>
 
-#include <atlbase.h>
+//#include <atlbase.h>
 #include <comutil.h>
 
 #include <shareLib.h>
@@ -42,6 +42,30 @@
 #include "cnvconvert.h"
 
 #define MAX_PATH_LEN 256
+
+// conver OLE/wide string to normal string
+class ToString
+{
+private:
+    char* m_str;
+	ToString() { }
+	ToString(const ToString&) { }
+	void operator=(const ToString&) { }
+	
+public:
+    ToString(const wchar_t* str) : m_str(NULL)
+	{
+	    if (str != NULL)
+		{
+	        size_t n = wcslen(str);
+	        m_str = new char[n + 1];
+		    wcstombs(m_str, str, n);
+		}			
+	}
+	operator const char*() const { return m_str; }
+	operator char*() { return m_str; }
+	~ToString() { delete m_str; }
+};
 
 static const char *driverName="NetShrVarInterface"; ///< Name of driver for use in message printing 
 
@@ -740,13 +764,13 @@ void NetShrVarInterface::getParams()
 			if (pAttrNode5 != NULL)
 			{
 			    hr=pAttrNode5->get_text(&bstrValue5);
-				field = atoi(COLE2CT(bstrValue5));
+				field = atoi(ToString(bstrValue5));
 			}
 			else
 			{
 			    field = -1;
 			}
-			access_str = strdup(COLE2CT(bstrValue3));
+			access_str = strdup(ToString(bstrValue3));
 			str = epicsStrtok_r(access_str, ",", &last_str);
 			while( str != NULL )
 			{
@@ -768,12 +792,12 @@ void NetShrVarInterface::getParams()
 				}
 				else
 				{
-				    std::cerr << "getParams: Unknown access mode \"" << str << "\" for param " << COLE2CT(bstrValue1) << std::endl;
+				    std::cerr << "getParams: Unknown access mode \"" << str << "\" for param " << ToString(bstrValue1) << std::endl;
 				}
 			    str = epicsStrtok_r(NULL, ",", &last_str);
 			}
 			free(access_str);
-			m_params[std::string(COLE2CT(bstrValue1))] = new NvItem(COLE2CT(bstrValue4),COLE2CT(bstrValue2),access_mode,field);
+			m_params[std::string(ToString(bstrValue1))] = new NvItem(ToString(bstrValue4),ToString(bstrValue2),access_mode,field);
 			SysFreeString(bstrValue1);
 			SysFreeString(bstrValue2);
 			SysFreeString(bstrValue3);
