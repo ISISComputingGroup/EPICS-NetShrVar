@@ -284,7 +284,7 @@ static void CVICALLBACK DataCallback (void * handle, CNVData data, void * callba
 	CNVDisposeData (data);
 }
 
-/// called when new data is available on a subscriber connection
+/// called by DataCallback() when new data is available on a subscriber connection
 void NetShrVarInterface::dataCallback (void * handle, CNVData data, CallbackData* cb_data)
 {
 //    std::cerr << "dataCallback: index " << cb_data->param_index << std::endl; 
@@ -554,7 +554,7 @@ static void CVICALLBACK StatusCallback (void * handle, CNVConnectionStatus statu
 	cb_data->intf->statusCallback(handle, status, error, cb_data);
 }
 
-/// called when status of a network shared variable changes
+/// called by StatusCallback() when status of a network shared variable changes
 void NetShrVarInterface::statusCallback (void * handle, CNVConnectionStatus status, int error, CallbackData* cb_data)
 {
 	if (error < 0)
@@ -597,7 +597,7 @@ NetShrVarInterface::NetShrVarInterface(const char *configSection, const char* co
     else
     {
 		throw std::runtime_error("Cannot load XML \"" + m_configFile + "\" (expanded from \"" + std::string(configFile) + "\"): load failure: "
-		    + result.description() );
+		    + result.description());
     }
 }
 
@@ -620,8 +620,16 @@ size_t NetShrVarInterface::nParams()
 	long n = 0;
 	char control_name_xpath[MAX_PATH_LEN];
 	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
-    pugi::xpath_node_set params = m_xmlconfig.select_nodes(control_name_xpath);
-    return params.size();
+	try
+	{
+        pugi::xpath_node_set params = m_xmlconfig.select_nodes(control_name_xpath);
+        return params.size();
+	}
+	catch(const std::exception& ex)
+	{
+	    std::cerr << "nparams failed " << ex.what() << std::endl;
+	    return 0;
+	}
 }
 
 void NetShrVarInterface::createParams(asynPortDriver* driver)
@@ -678,10 +686,19 @@ void NetShrVarInterface::getParams()
 	m_params.clear();
 	char control_name_xpath[MAX_PATH_LEN];
 	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
-    pugi::xpath_node_set params =m_xmlconfig.select_nodes(control_name_xpath);
-	if (params.size() == 0)
+    pugi::xpath_node_set params;
+	try
 	{
-	    std::cerr << "getParams failed" << std::endl;
+	    params = m_xmlconfig.select_nodes(control_name_xpath);
+	    if (params.size() == 0)
+	    {
+	        std::cerr << "getParams failed" << std::endl;
+		    return;
+	    }
+	}
+	catch(const std::exception& ex)
+	{
+	    std::cerr << "getParams failed " << ex.what() << std::endl;
 		return;
 	}
 	long n = 0;
@@ -691,44 +708,48 @@ void NetShrVarInterface::getParams()
 	char *access_str, *str;
 	for (pugi::xpath_node_set::const_iterator it = params.begin(); it != params.end(); ++it)
 	{
-		pugi::xpath_node node = *it;
-		
+		pugi::xpath_node node = *it;	
 		std::string attr1 = node.node().attribute("name").value();
 		std::string attr2 = node.node().attribute("type").value();
 		std::string attr3 = node.node().attribute("access").value();
 		std::string attr4 = node.node().attribute("netvar").value();
-		std::string attr5 = node.node().attribute("field").value();
+		std::string attr5 = node.node().attribute("field").value();	
+		if (attr5.size() == 0)
+		{
 			field = -1;
+		}
+		else
+		{
 			field = atoi(attr5.c_str());
-
-			access_str = strdup(attr3.c_str());
-			str = epicsStrtok_r(access_str, ",", &last_str);
-			while( str != NULL )
+		}
+		access_str = strdup(attr3.c_str());
+		str = epicsStrtok_r(access_str, ",", &last_str);
+		while( str != NULL )
+		{
+			if (!strcmp(str, "R"))
 			{
-			    if (!strcmp(str, "R"))
-				{
-				    access_mode |= NvItem::Read;
-				}
-			    else if (!strcmp(str, "BR"))
-				{
-				    access_mode |= NvItem::BufferedRead;
-				}
-			    else if (!strcmp(str, "W"))
-				{
-				    access_mode |= NvItem::Write;
-				}
-			    else if (!strcmp(str, "BW"))
-				{
-				    access_mode |= NvItem::BufferedWrite;
-				}
-				else
-				{
-				    std::cerr << "getParams: Unknown access mode \"" << str << "\" for param " << attr1 << std::endl;
-				}
-			    str = epicsStrtok_r(NULL, ",", &last_str);
+				access_mode |= NvItem::Read;
 			}
-			free(access_str);
-			m_params[attr1] = new NvItem(attr4.c_str(),attr2.c_str(),access_mode,field);
+			else if (!strcmp(str, "BR"))
+			{
+				access_mode |= NvItem::BufferedRead;
+			}
+			else if (!strcmp(str, "W"))
+			{
+				access_mode |= NvItem::Write;
+			}
+			else if (!strcmp(str, "BW"))
+			{
+				access_mode |= NvItem::BufferedWrite;
+			}
+			else
+			{
+				std::cerr << "getParams: Unknown access mode \"" << str << "\" for param " << attr1 << std::endl;
+			}
+			str = epicsStrtok_r(NULL, ",", &last_str);
+		}
+		free(access_str);
+		m_params[attr1] = new NvItem(attr4.c_str(),attr2.c_str(),access_mode,field);
 		
 	}	
 }
@@ -785,7 +806,7 @@ void NetShrVarInterface::setValueCNV(const std::string& name, CNVData value)
 	ERROR_CHECK("setValue", error);
 }
 
-// update values from buffered subscribers
+/// update values from buffered subscribers
 void NetShrVarInterface::updateValues()
 {
     CNVBufferDataStatus dataStatus;
