@@ -27,7 +27,9 @@
 #include <errlog.h>
 #include <iocsh.h>
 
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 #include "convertToString.h"
 #include "NetShrVarInterface.h"
@@ -35,29 +37,7 @@
 
 #include <epicsExport.h>
 
-/// Helper function to map a win32 structured exception into a C++ standard exception
-std::string Win32StructuredException::win32_message(unsigned int code, EXCEPTION_POINTERS * pExp)
-{
-	char buffer[256];
-	_snprintf(buffer, sizeof(buffer), "Win32StructuredException code 0x%x pExpCode 0x%x pExpAddress %p", code, pExp->ExceptionRecord->ExceptionCode, pExp->ExceptionRecord->ExceptionAddress);
-	buffer[sizeof(buffer)-1] = '\0';
-	return std::string(buffer);
-}
-
 static const char *driverName="NetShrVarDriver"; ///< Name of driver for use in message printing 
-
-/// Function to translate a Win32 structured exception into a standard C++ exception. 
-/// This is registered via registerStructuredExceptionHandler()
-static void seTransFunction(unsigned int u, EXCEPTION_POINTERS* pExp)
-{
-	throw Win32StructuredException(u, pExp);
-}
-
-/// Register a handler for Win32 strcutured exceptions. This needs to be done on a per thread basis.
-static void registerStructuredExceptionHandler()
-{
-	_set_se_translator(seTransFunction);
-}
 
 /// write a value to the driver
 /// @tparam T data type of \a value
@@ -70,7 +50,6 @@ asynStatus NetShrVarDriver::writeValue(asynUser *pasynUser, const char* function
 	int function = pasynUser->reason;
 	asynStatus status = asynSuccess;
 	const char *paramName = NULL;
-	registerStructuredExceptionHandler();
 	getParamName(function, &paramName);
 	try
 	{
@@ -105,7 +84,6 @@ asynStatus NetShrVarDriver::writeArrayValue(asynUser *pasynUser, const char* fun
 	int function = pasynUser->reason;
 	asynStatus status = asynSuccess;
 	const char *paramName = NULL;
-	registerStructuredExceptionHandler();
 	getParamName(function, &paramName);
 	try
 	{
@@ -116,14 +94,14 @@ asynStatus NetShrVarDriver::writeArrayValue(asynUser *pasynUser, const char* fun
 		m_netvarint->setArrayValue(paramName, value, nElements);
 		asynPrint(pasynUser, ASYN_TRACEIO_DRIVER, 
 			"%s:%s: function=%d, name=%s, nElements=%d\n", 
-			driverName, functionName, function, paramName, nElements);
+			driverName, functionName, function, paramName, (int)nElements);
 		return asynSuccess;
 	}
 	catch(const std::exception& ex)
 	{
 		epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize, 
 			"%s:%s: status=%d, function=%d, name=%s, nElements=%d, error=%s", 
-			driverName, functionName, status, function, paramName, nElements, ex.what());
+			driverName, functionName, status, function, paramName, (int)nElements, ex.what());
 		return asynError;
 	}
 }
@@ -148,7 +126,6 @@ asynStatus NetShrVarDriver::writeOctet(asynUser *pasynUser, const char *value, s
 	int function = pasynUser->reason;
 	asynStatus status = asynSuccess;
 	const char *paramName = NULL;
-	registerStructuredExceptionHandler();
 	getParamName(function, &paramName);
 	const char* functionName = "writeOctet";
 	std::string value_s(value, maxChars);
@@ -206,7 +183,6 @@ asynStatus NetShrVarDriver::readArrayValue(asynUser *pasynUser, const char* func
 	int function = pasynUser->reason;
 	asynStatus status = asynSuccess;
 	const char *paramName = NULL;
-	registerStructuredExceptionHandler();
 	getParamName(function, &paramName);
 	try
 	{
@@ -217,7 +193,7 @@ asynStatus NetShrVarDriver::readArrayValue(asynUser *pasynUser, const char* func
 		m_netvarint->readArrayValue(paramName, value, nElements, nIn);
 		asynPrint(pasynUser, ASYN_TRACEIO_DRIVER, 
 			"%s:%s: function=%d, name=%s, size=%d\n", 
-			driverName, functionName, function, paramName, nElements);
+			driverName, functionName, function, paramName, (int)nElements);
 		return asynSuccess;
 	}
 	catch(const std::exception& ex)
@@ -225,7 +201,7 @@ asynStatus NetShrVarDriver::readArrayValue(asynUser *pasynUser, const char* func
 		*nIn = 0;
 		epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize, 
 			"%s:%s: status=%d, function=%d, name=%s, size=%d, error=%s", 
-			driverName, functionName, status, function, paramName, nElements, ex.what());
+			driverName, functionName, status, function, paramName, (int)nElements, ex.what());
 		return asynError;
 	}
 }
@@ -322,7 +298,6 @@ void NetShrVarDriver::epicsExitFunc(void* arg)
 void NetShrVarDriver::NetShrVarTask(void* arg) 
 { 
 	NetShrVarDriver* driver = (NetShrVarDriver*)arg; 	
-	registerStructuredExceptionHandler();
 	int poll_ms = driver->pollTime();
 	if (poll_ms > 0)
 	{
@@ -346,7 +321,6 @@ extern "C" {
 	/// @param[in] options @copydoc initArg4
 	int NetShrVarConfigure(const char *portName, const char* configSection, const char *configFile, int pollPeriod, int options)
 	{
-		registerStructuredExceptionHandler();
 		try
 		{
 			NetShrVarInterface* netvarint = new NetShrVarInterface(configSection, configFile, options);

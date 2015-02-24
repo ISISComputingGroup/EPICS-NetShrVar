@@ -9,7 +9,7 @@ include $(TOP)/configure/CONFIG
 # build a support library
 
 USR_INCLUDES += -ICVI/include
-USR_CXXFLAGS += /EHa
+USR_CXXFLAGS_Linux += -std=c++11
 
 LIBRARY_IOC += NetShrVar
 
@@ -43,6 +43,12 @@ include $(TOP)/configure/RULES
 ../cnvconvert.cpp : CVI
 CVI :
 	-mkdir CVI
+ifeq (WIN32,$(OS_CLASS))
 	xcopy /D /I /E /Q /Y /R $(NICVIDIR)\include $@\include
 	xcopy /D /I /E /Q /Y /R $(NICVIDIR)\extlib $@\extlib
+endif
+ifeq (Linux,$(OS_CLASS))
+	cp -r $(NICVIDIR)/include $@
+	cp -r $(NICVIDIR)/extlib $@
+endif
 

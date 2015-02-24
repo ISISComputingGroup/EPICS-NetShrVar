@@ -11,6 +11,7 @@ endef
 $(foreach dir, $(filter-out configure,$(DIRS)),$(eval $(call DIR_template,$(dir))))
 
 iocBoot_DEPEND_DIRS += $(filter %App,$(DIRS))
+TestNetShrVarApp_DEPEND_DIRS += NetShrVarApp
 
 include $(TOP)/configure/RULES_TOP
 

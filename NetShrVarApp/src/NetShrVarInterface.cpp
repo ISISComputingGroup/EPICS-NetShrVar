@@ -25,6 +25,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <cstring>
 
 #include <cvirte.h>		
 #include <userint.h>
@@ -118,8 +119,8 @@ struct NvItem
 	enum { Read=0x1, Write=0x2, BufferedRead=0x4, BufferedWrite=0x8 } NvAccessMode;   ///< possible access modes to network shared variable
 	std::string nv_name;   ///< full path to network shared variable 
 	std::string type;   ///< type as specified in the XML file e.g. float64array
-	int field; ///< if we refer to a struct, this is the index of the field (starting at 0), otherwise it is -1 
 	unsigned access; ///< combination of #NvAccessMode
+	int field; ///< if we refer to a struct, this is the index of the field (starting at 0), otherwise it is -1 
 	int id; ///< asyn parameter id, -1 if not assigned
 	std::vector<char> array_data; ///< only used for array parameters, contains cached copy of data as this is not stored in usual asyn parameter map
 	CNVSubscriber subscriber;
@@ -137,7 +138,7 @@ struct NvItem
 	    fprintf(fp, "Report for asyn parameter \"%s\" type \"%s\" network variable \"%s\"\n", name.c_str(), type.c_str(), nv_name.c_str());
 		if (array_data.size() > 0)
 		{
-			fprintf(fp, "  Current array size: %d\n", array_data.size());
+			fprintf(fp, "  Current array size: %d\n", (int)array_data.size());
 		}
 		if (field != -1)
 		{
@@ -195,16 +196,19 @@ static void CVICALLBACK DataTransferredCallback(void * handle, int error, void *
 
 void NetShrVarInterface::connectVars()
 {
-	int error, running;
+	int error;
 	CallbackData* cb_data;
 	int waitTime = 3000;
 	int clientBufferMaxItems = 200;
+#ifdef _WIN32
+    int running = 0;
     error = CNVVariableEngineIsRunning(&running); 
 	ERROR_CHECK("CNVVariableEngineIsRunning", error);
     if (running == 0)
     {
 		std::cerr << "connectVars: Variable engine is not running" << std::endl;
     }
+#endif
 	for(params_t::const_iterator it=m_params.begin(); it != m_params.end(); ++it)
 	{
 		NvItem* item = it->second;
@@ -401,7 +405,7 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 {
 	if (nDims == 0)
 	{
-	    CNV2C<cnvType>::ctype val;
+	    typename CNV2C<cnvType>::ctype val;
 	    int status = CNVGetScalarDataValue (data, type, &val);
 	    ERROR_CHECK("CNVGetScalarDataValue", status);
 	    updateParamValue(param_index, val, do_asyn_param_callbacks);
@@ -409,7 +413,7 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 	}
 	else
 	{
-	    CNV2C<cnvType>::ctype* val;
+	    typename CNV2C<cnvType>::ctype* val;
 	    size_t dimensions[10];
 	    int status = CNVGetArrayDataDimensions(data, nDims, dimensions);
 	    ERROR_CHECK("CNVGetArrayDataDimensions", status);
@@ -418,7 +422,7 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 		{
 		    nElements *= dimensions[i];
 		}
-		val = new CNV2C<cnvType>::ctype[nElements];
+		val = new typename CNV2C<cnvType>::ctype[nElements];
 		status = CNVGetArrayDataValue(data, type, val, nElements);
 	    ERROR_CHECK("CNVGetArrayDataValue", status);
 	    updateParamArrayValue(param_index, val, nElements);
@@ -571,7 +575,7 @@ static epicsThreadOnceId onceId = EPICS_THREAD_ONCE_INIT;
 
 static void initCV(void*)
 {
-    char* dummy_argv[2] = { "NetShrVarInterface", NULL };
+    char* dummy_argv[2] = { strdup("NetShrVarInterface"), NULL };
 	if (InitCVIRTE (0, dummy_argv, 0) == 0)
 		throw std::runtime_error("InitCVIRTE");
 }
@@ -583,7 +587,6 @@ NetShrVarInterface::NetShrVarInterface(const char *configSection, const char* co
 				m_configSection(configSection), m_options(options)		
 {
 	epicsThreadOnce(&onceId, initCV, NULL);
-	short sResult = FALSE;
 	char* configFile_expanded = macEnvExpand(configFile);
 	m_configFile = configFile_expanded;
 	epicsAtExit(epicsExitFunc, this);
@@ -617,9 +620,8 @@ void NetShrVarInterface::epicsExitFunc(void* arg)
 
 size_t NetShrVarInterface::nParams()
 {
-	long n = 0;
 	char control_name_xpath[MAX_PATH_LEN];
-	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
+	snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
 	try
 	{
         pugi::xpath_node_set params = m_xmlconfig.select_nodes(control_name_xpath);
@@ -685,7 +687,7 @@ void NetShrVarInterface::getParams()
 {
 	m_params.clear();
 	char control_name_xpath[MAX_PATH_LEN];
-	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
+	snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
     pugi::xpath_node_set params;
 	try
 	{
@@ -701,7 +703,6 @@ void NetShrVarInterface::getParams()
 	    std::cerr << "getParams failed " << ex.what() << std::endl;
 		return;
 	}
-	long n = 0;
 	int field;
 	unsigned access_mode;
 	char *last_str = NULL;
@@ -723,6 +724,7 @@ void NetShrVarInterface::getParams()
 			field = atoi(attr5.c_str());
 		}
 		access_str = strdup(attr3.c_str());
+		access_mode = 0;
 		str = epicsStrtok_r(access_str, ",", &last_str);
 		while( str != NULL )
 		{

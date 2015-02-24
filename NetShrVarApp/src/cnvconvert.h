@@ -262,7 +262,7 @@ static T* convertToPtr(U val)
 template <typename T, bool is_unsigned>
 struct MakeSignedImpl
 {
-    typedef typename T type;
+    typedef T type;
 };
 
 /// specialisation of MakeSignedImpl for unsigned types i.e. <T,true>
@@ -283,7 +283,7 @@ struct MakeSigned
 template<typename T, typename U>
 static T* convertToPtr(U* val)
 {
-    if ( std::is_same< MakeSigned< std::remove_cv<T>::type >::type, MakeSigned< std::remove_cv<U>::type >::type >::value )
+    if ( std::is_same< typename MakeSigned< typename std::remove_cv<T>::type >::type, typename MakeSigned< typename std::remove_cv<U>::type >::type >::value )
 	{
         return reinterpret_cast<T*>(val);
 	}

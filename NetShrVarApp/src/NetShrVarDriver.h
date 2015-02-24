@@ -15,19 +15,6 @@
 
 class NetShrVarInterface;
 
-/// An STL exception describing a Win32 Structured Exception. 
-/// Code needs to be compiled with /EHa if you wish to use this via _set_se_translator().
-/// Note that _set_se_translator() needs to be called on a per thread basis
-class Win32StructuredException : public std::runtime_error
-{
-public:
-	explicit Win32StructuredException(const std::string& message) : std::runtime_error(message) { }
-	explicit Win32StructuredException(unsigned int code, EXCEPTION_POINTERS *pExp) : std::runtime_error(win32_message(code, pExp)) { }
-private:
-	static std::string win32_message(unsigned int code, EXCEPTION_POINTERS * pExp);
-};
-
-
 /// EPICS Asyn port driver class. 
 class NetShrVarDriver : public asynPortDriver 
 {

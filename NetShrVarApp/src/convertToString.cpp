@@ -9,6 +9,7 @@
 /// @author Freddie Akeroyd, STFC ISIS Facility, GB
 
 #include <string>
+#include <cstdio>
 #include "convertToString.h"
 
 #ifdef _WIN32
@@ -19,7 +20,8 @@
 template<typename T>
 std::string convertToString(T t)
 {
-	should_never_get_called;
+	should_never_get_called(t);
+	return "";
 }
 
 template<>

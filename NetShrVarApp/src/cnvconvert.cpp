@@ -8,6 +8,8 @@
 /// @file cnvconvert.cpp Network shared variable type convertion routine.
 /// @author Freddie Akeroyd, STFC ISIS Facility, GB
 
+#include <stdexcept>
+
 #include <cvirte.h>		
 #include <userint.h>
 #include <cvinetv.h>
