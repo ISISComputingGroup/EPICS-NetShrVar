@@ -19,7 +19,7 @@ LIBRARY_IOC += NetShrVar
 DBD += NetShrVar.dbd
 
 # specify all source files to be compiled and added to the library
-NetShrVar_SRCS += convertToString.cpp cnvconvert.cpp NetShrVarDriver.cpp NetShrVarInterface.cpp 
+NetShrVar_SRCS += convertToString.cpp cnvconvert.cpp NetShrVarDriver.cpp NetShrVarInterface.cpp pugixml.cpp
 
 NetShrVar_LIBS += asyn autosave
 NetShrVar_LIBS += $(EPICS_BASE_IOC_LIBS)
@@ -29,9 +29,9 @@ CVILIB = CVI/extlib/msvc64
 else
 CVILIB = CVI/extlib/msvc
 endif
-NetShrVar_SYS_LIBS_WIN32 += $(CVILIB)/cvinetv $(CVILIB)/cvisupp $(CVILIB)/cvirt
+NetShrVar_SYS_LIBS_WIN32 += $(CVILIB)/cvinetv $(CVILIB)/cvisupp $(CVILIB)/cvirt 
 
-NetShrVar_SYS_LIBS_WIN32 += msxml2 comsuppw
+NetShrVar_SYS_LIBS_WIN32 += user32
 
 #===========================
 

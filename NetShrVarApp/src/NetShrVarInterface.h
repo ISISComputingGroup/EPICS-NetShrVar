@@ -13,9 +13,6 @@
 
 #include <stdio.h>
 
-//#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-#include <windows.h>
-
 #include <string>
 #include <vector>
 #include <map>
@@ -29,12 +26,11 @@
 #include <epicsThread.h>
 #include <epicsExit.h>
 
-#include <msxml2.h>
-
 #include <cvirte.h>		
 #include <userint.h>
 #include <cvinetv.h>
 
+#include "pugixml.hpp"
 
 /// option argument in NetShrVarConfigure() of @link st.cmd @endlink not used at present
 enum NetShrVarOptions { NVNothing = 0, NVSomething=1 };
@@ -48,8 +44,8 @@ class NetShrVarInterface
 {
 public:
 	NetShrVarInterface(const char* configSection, const char *configFile, int options);
-	long nParams();
-	~NetShrVarInterface() { if (m_pxmldom != NULL) { m_pxmldom->Release(); m_pxmldom = 0; } }
+	size_t nParams();
+	~NetShrVarInterface() { }
 	void updateValues();
 	void createParams(asynPortDriver* driver);
 	void report(FILE* fp, int details);
@@ -65,13 +61,12 @@ private:
 	std::string m_configFile;   
 	int m_options; ///< the various #NetShrVarOptions currently in use
 //	epicsMutex m_lock;
-	IXMLDOMDocument2 *m_pxmldom;
 	asynPortDriver* m_driver;
 	typedef std::map<std::string,NvItem*> params_t;
 	params_t m_params;
+	pugi::xml_document m_xmlconfig;
 
 	void getParams();
-	void DomFromCOM();
 	void setValueCNV(const std::string& name, CNVData value);
 	static void epicsExitFunc(void* arg);
 	bool checkOption(NetShrVarOptions option) { return ( m_options & static_cast<int>(option) ) != 0; }

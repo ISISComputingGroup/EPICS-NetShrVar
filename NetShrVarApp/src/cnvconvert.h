@@ -5,7 +5,7 @@
 * in the file LICENSE.txt that is included with this distribution. 
 \*************************************************************************/ 
 
-/// @file cnvconvert.h Header file for network shared variable convertion routines.
+/// @file cnvconvert.h Header file for network shared variable to EPICS type convertion routines.
 /// @author Freddie Akeroyd, STFC ISIS Facility, GB
 
 #ifndef CNVCONVERT_H
@@ -258,14 +258,14 @@ static T* convertToPtr(U val)
 //   return static_cast<T*>(0);
 }
 
-/// default handles non-signed types i.e. <T,false>
+/// default case handles already signed types i.e. <T,false>
 template <typename T, bool is_unsigned>
 struct MakeSignedImpl
 {
     typedef typename T type;
 };
 
-/// specialisation of MakeSignedImpl for signed types
+/// specialisation of MakeSignedImpl for unsigned types i.e. <T,true>
 template <typename T>
 struct MakeSignedImpl<T,true>
 {
@@ -279,7 +279,7 @@ struct MakeSigned
     typedef typename MakeSignedImpl< T, std::is_unsigned<T>::value >::type type;
 };
 
-/// Types that differ only in sign are considered castable as epics asyn doesn't do unsigned data types for arrays
+/// Types that differ only in sign are considered castable as epics asyn doesn't have unsigned data types for arrays
 template<typename T, typename U>
 static T* convertToPtr(U* val)
 {

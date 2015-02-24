@@ -237,6 +237,8 @@ performed by Cosylab).
 LabVIEW is a trademark of National Instruments. Neither STFC, nor any software programs or other 
 goods or services offered by STFC, are affiliated with, endorsed by, or sponsored by National Instruments. 
 
+This software is based on pugixml library (http://pugixml.org). pugixml is Copyright (C) 2006-2014 Arseny Kapoulkine.
+See README_pugixml.txt for further details.
 </P>
 
 */

@@ -21,7 +21,6 @@ $(APPNAME)_DBD += NetShrVar.dbd
 $(APPNAME)_LIBS += NetShrVar
 $(APPNAME)_LIBS += asyn
 $(APPNAME)_LIBS += autosave
-#$(APPNAME)_LIBS += pugixml
 
 # TestNetShrVar_registerRecordDeviceDriver.cpp derives from TestNetShrVar.dbd
 $(APPNAME)_SRCS += $(APPNAME)_registerRecordDeviceDriver.cpp
@@ -35,8 +34,6 @@ $(APPNAME)_SRCS_vxWorks += -nil-
 
 # Finally link to the EPICS Base libraries
 $(APPNAME)_LIBS += $(EPICS_BASE_IOC_LIBS)
-
-$(APPNAME)_SYS_LIBS_WIN32 += msxml2 comsuppw
 
 ifneq ($(findstring windows,$(EPICS_HOST_ARCH)),)
 CVILIB = $(TOP)/NetShrVarApp/src/O.$(EPICS_HOST_ARCH)/CVI/extlib/msvc64

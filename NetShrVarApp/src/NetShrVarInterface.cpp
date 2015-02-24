@@ -11,7 +11,10 @@
 #include <stdio.h>
 
 //#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+#ifdef _WIN32
 #include <windows.h>
+#include <comutil.h>
+#endif /* _WIN32 */
 
 #include <string>
 #include <vector>
@@ -27,14 +30,13 @@
 #include <userint.h>
 #include <cvinetv.h>
 
-//#include <atlbase.h>
-#include <comutil.h>
-
 #include <shareLib.h>
 #include <macLib.h>
 #include <epicsGuard.h>
 #include <epicsString.h>
 #include <errlog.h>
+
+#include "pugixml.hpp"
 
 #include "asynPortDriver.h"
 
@@ -42,30 +44,6 @@
 #include "cnvconvert.h"
 
 #define MAX_PATH_LEN 256
-
-// conver OLE/wide string to normal string
-class ToString
-{
-private:
-    char* m_str;
-	ToString() { }
-	ToString(const ToString&) { }
-	void operator=(const ToString&) { }
-	
-public:
-    ToString(const wchar_t* str) : m_str(NULL)
-	{
-	    if (str != NULL)
-		{
-	        size_t n = wcslen(str);
-	        m_str = new char[n + 1];
-		    wcstombs(m_str, str, n);
-		}			
-	}
-	operator const char*() const { return m_str; }
-	operator char*() { return m_str; }
-	~ToString() { delete m_str; }
-};
 
 static const char *driverName="NetShrVarInterface"; ///< Name of driver for use in message printing 
 
@@ -598,27 +576,6 @@ static void initCV(void*)
 		throw std::runtime_error("InitCVIRTE");
 }
 
-void NetShrVarInterface::DomFromCOM()
-{
-	m_pxmldom = NULL;
-	CoInitializeEx(NULL, COINIT_MULTITHREADED);
-	HRESULT hr=CoCreateInstance(CLSID_DOMDocument, NULL, CLSCTX_SERVER, IID_IXMLDOMDocument2, (void**)&m_pxmldom);
-	if (FAILED(hr))
-	{
-		throw std::runtime_error("Cannot load DomFromCom");
-	}
-	if (m_pxmldom != NULL)
-	{
-		m_pxmldom->put_async(VARIANT_FALSE);
-		m_pxmldom->put_validateOnParse(VARIANT_FALSE);
-		m_pxmldom->put_resolveExternals(VARIANT_FALSE); 
-	}
-	else
-	{
-		throw std::runtime_error("Cannot load DomFromCom");
-	}
-}
-
 /// \param[in] configSection @copydoc initArg1
 /// \param[in] configFile @copydoc initArg2
 /// \param[in] options @copydoc initArg4
@@ -626,23 +583,22 @@ NetShrVarInterface::NetShrVarInterface(const char *configSection, const char* co
 				m_configSection(configSection), m_options(options)		
 {
 	epicsThreadOnce(&onceId, initCV, NULL);
-	DomFromCOM();
 	short sResult = FALSE;
 	char* configFile_expanded = macEnvExpand(configFile);
 	m_configFile = configFile_expanded;
-	HRESULT hr = m_pxmldom->load(_variant_t(configFile_expanded), &sResult);
-	free(configFile_expanded);
-	if(FAILED(hr))
-	{
-		throw std::runtime_error("Cannot load XML \"" + m_configFile + "\" (expanded from \"" + std::string(configFile) + "\"): load failure");
-	}
-	if (sResult != VARIANT_TRUE)
-	{
-		throw std::runtime_error("Cannot load XML \"" + m_configFile + "\" (expanded from \"" + std::string(configFile) + "\"): load failure");
-	}
-	std::cerr << "Loaded XML config file \"" << m_configFile << "\" (expanded from \"" << configFile << "\")" << std::endl;
-//	m_extint = doPath("/lvinput/extint/@path").c_str();
 	epicsAtExit(epicsExitFunc, this);
+
+    pugi::xml_parse_result result = m_xmlconfig.load_file(configFile_expanded);
+	free(configFile_expanded);
+	if (result)
+	{
+	    std::cerr << "Loaded XML config file \"" << m_configFile << "\" (expanded from \"" << configFile << "\")" << std::endl;
+	}
+    else
+    {
+		throw std::runtime_error("Cannot load XML \"" + m_configFile + "\" (expanded from \"" + std::string(configFile) + "\"): load failure: "
+		    + result.description() );
+    }
 }
 
 // need to be careful here as might get called at wrong point. May need to check with driver.
@@ -659,19 +615,13 @@ void NetShrVarInterface::epicsExitFunc(void* arg)
     CNVFinish();
 }
 
-long NetShrVarInterface::nParams()
+size_t NetShrVarInterface::nParams()
 {
 	long n = 0;
 	char control_name_xpath[MAX_PATH_LEN];
 	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
-	IXMLDOMNodeList* pXMLDomNodeList = NULL;
-	HRESULT hr = m_pxmldom->selectNodes(_bstr_t(control_name_xpath), &pXMLDomNodeList);
-	if (SUCCEEDED(hr) && pXMLDomNodeList != NULL)
-	{
-		pXMLDomNodeList->get_length(&n);
-		pXMLDomNodeList->Release();
-	}
-	return n;
+    pugi::xpath_node_set params = m_xmlconfig.select_nodes(control_name_xpath);
+    return params.size();
 }
 
 void NetShrVarInterface::createParams(asynPortDriver* driver)
@@ -728,49 +678,30 @@ void NetShrVarInterface::getParams()
 	m_params.clear();
 	char control_name_xpath[MAX_PATH_LEN];
 	_snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
-	IXMLDOMNodeList* pXMLDomNodeList = NULL;
-	HRESULT hr = m_pxmldom->selectNodes(_bstr_t(control_name_xpath), &pXMLDomNodeList);
-	if (FAILED(hr) || pXMLDomNodeList == NULL)
+    pugi::xpath_node_set params =m_xmlconfig.select_nodes(control_name_xpath);
+	if (params.size() == 0)
 	{
 	    std::cerr << "getParams failed" << std::endl;
 		return;
 	}
-	IXMLDOMNode *pNode, *pAttrNode1, *pAttrNode2, *pAttrNode3, *pAttrNode4, *pAttrNode5;
 	long n = 0;
 	int field;
 	unsigned access_mode;
 	char *last_str = NULL;
 	char *access_str, *str;
-	pXMLDomNodeList->get_length(&n);
-	for(long i=0; i<n; ++i)
+	for (pugi::xpath_node_set::const_iterator it = params.begin(); it != params.end(); ++it)
 	{
-		pNode = NULL;
-		hr = pXMLDomNodeList->get_item(i, &pNode);
-		if (SUCCEEDED(hr) && pNode != NULL)
-		{
-			IXMLDOMNamedNodeMap *attributeMap = NULL;
-			pAttrNode1 = pAttrNode2 = pAttrNode3 = pAttrNode4 = pAttrNode5 = NULL;
-			pNode->get_attributes(&attributeMap);
-			hr = attributeMap->getNamedItem(_bstr_t("name"), &pAttrNode1);
-			hr = attributeMap->getNamedItem(_bstr_t("type"), &pAttrNode2);
-			hr = attributeMap->getNamedItem(_bstr_t("access"), &pAttrNode3);
-			hr = attributeMap->getNamedItem(_bstr_t("netvar"), &pAttrNode4);
-			hr = attributeMap->getNamedItem(_bstr_t("field"), &pAttrNode5);
-			BSTR bstrValue1 = NULL, bstrValue2 = NULL, bstrValue3 = NULL, bstrValue4 = NULL, bstrValue5 = NULL;
-			hr=pAttrNode1->get_text(&bstrValue1);
-			hr=pAttrNode2->get_text(&bstrValue2);
-			hr=pAttrNode3->get_text(&bstrValue3);
-			hr=pAttrNode4->get_text(&bstrValue4);
-			if (pAttrNode5 != NULL)
-			{
-			    hr=pAttrNode5->get_text(&bstrValue5);
-				field = atoi(ToString(bstrValue5));
-			}
-			else
-			{
-			    field = -1;
-			}
-			access_str = strdup(ToString(bstrValue3));
+		pugi::xpath_node node = *it;
+		
+		std::string attr1 = node.node().attribute("name").value();
+		std::string attr2 = node.node().attribute("type").value();
+		std::string attr3 = node.node().attribute("access").value();
+		std::string attr4 = node.node().attribute("netvar").value();
+		std::string attr5 = node.node().attribute("field").value();
+			field = -1;
+			field = atoi(attr5.c_str());
+
+			access_str = strdup(attr3.c_str());
 			str = epicsStrtok_r(access_str, ",", &last_str);
 			while( str != NULL )
 			{
@@ -792,33 +723,14 @@ void NetShrVarInterface::getParams()
 				}
 				else
 				{
-				    std::cerr << "getParams: Unknown access mode \"" << str << "\" for param " << ToString(bstrValue1) << std::endl;
+				    std::cerr << "getParams: Unknown access mode \"" << str << "\" for param " << attr1 << std::endl;
 				}
 			    str = epicsStrtok_r(NULL, ",", &last_str);
 			}
 			free(access_str);
-			m_params[std::string(ToString(bstrValue1))] = new NvItem(ToString(bstrValue4),ToString(bstrValue2),access_mode,field);
-			SysFreeString(bstrValue1);
-			SysFreeString(bstrValue2);
-			SysFreeString(bstrValue3);
-			SysFreeString(bstrValue4);
-			if (bstrValue5 != NULL)
-			{
-			    SysFreeString(bstrValue5);
-			}
-			pAttrNode1->Release();
-			pAttrNode2->Release();
-			pAttrNode3->Release();
-			pAttrNode4->Release();
-			if (pAttrNode5 != NULL)
-			{
-			    pAttrNode5->Release();
-			}
-			attributeMap->Release();
-			pNode->Release();
-		}
+			m_params[attr1] = new NvItem(attr4.c_str(),attr2.c_str(),access_mode,field);
+		
 	}	
-	pXMLDomNodeList->Release();
 }
 
 template <>
