@@ -621,7 +621,7 @@ void NetShrVarInterface::epicsExitFunc(void* arg)
 size_t NetShrVarInterface::nParams()
 {
 	char control_name_xpath[MAX_PATH_LEN];
-	snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
+	epicsSnprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
 	try
 	{
         pugi::xpath_node_set params = m_xmlconfig.select_nodes(control_name_xpath);
@@ -687,7 +687,7 @@ void NetShrVarInterface::getParams()
 {
 	m_params.clear();
 	char control_name_xpath[MAX_PATH_LEN];
-	snprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
+	epicsSnprintf(control_name_xpath, sizeof(control_name_xpath), "/netvar/section[@name='%s']/param", m_configSection.c_str());
     pugi::xpath_node_set params;
 	try
 	{
