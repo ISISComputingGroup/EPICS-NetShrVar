@@ -255,7 +255,7 @@ void NetShrVarDriver::report(FILE* fp, int details)
 NetShrVarDriver::NetShrVarDriver(NetShrVarInterface* netvarint, int poll_ms, const char *portName) 
 	: asynPortDriver(portName, 
 	0, /* maxAddr */ 
-	netvarint->nParams(),
+	static_cast<int>(netvarint->nParams()),
 	asynInt32Mask | asynInt32ArrayMask | asynFloat64Mask | asynFloat64ArrayMask | asynOctetMask | asynDrvUserMask, /* Interface mask */
 	asynInt32Mask | asynInt32ArrayMask | asynFloat64Mask | asynFloat64ArrayMask | asynOctetMask,  /* Interrupt mask */
 	ASYN_CANBLOCK, /* asynFlags.  This driver can block but it is not multi-device */
