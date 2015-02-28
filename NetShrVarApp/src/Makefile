@@ -13,6 +13,12 @@ USR_CXXFLAGS_Linux += -std=c++11
 
 LIBRARY_IOC += NetShrVar
 
+ifeq (WIN32,$(OS_CLASS))
+NICVIDIR=$(subst /,\,$(ICPBINARYDIR)/CVI2013)
+else
+NICVIDIR=$(ICPBINARYDIR)/CVI2013
+endif
+
 # xxxRecord.h will be created from xxxRecord.dbd
 #DBDINC += xxxRecord
 # install NetShrVar.dbd into <top>/dbd
@@ -29,8 +35,8 @@ CVILIB = CVI/extlib/msvc64
 else
 CVILIB = CVI/extlib/msvc
 endif
-NetShrVar_SYS_LIBS_WIN32 += $(CVILIB)/cvinetv $(CVILIB)/cvisupp $(CVILIB)/cvirt 
 
+NetShrVar_SYS_LIBS_WIN32 += $(CVILIB)/cvinetv $(CVILIB)/cvisupp $(CVILIB)/cvirt 
 NetShrVar_SYS_LIBS_WIN32 += user32
 
 #===========================
