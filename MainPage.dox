@@ -75,8 +75,8 @@ multiple config section and so can also be shared between IOCs.
 
 <H2>Requirements</H2>
 
-The xsltproc program is required to generate an initial EPICS db file from the XML configuration file.  
-On windows it can be downloaded from http://gnuwin32.sourceforge.net/packages/libxslt.htm, alternatively these
+The xsltproc program (part of libxml2) is required to generate an initial EPICS db file from the XML configuration file.  
+On windows it can be downloaded from http://gnuwin32.sourceforge.net/packages/libxslt.htm alternatively these
 steps could be carried out on a Linux computer and the results transferred back to Windows.
 You may need to adjust line endings (&lt;CR&gt; &lt;-&gt; &lt;CR&gt;&lt;LF&gt;) on some of the input/output files. For this you
 can use the dos2unix and unix2dos programs or some of the following sed commands on Linux:
