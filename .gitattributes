@@ -24,4 +24,6 @@
 *.jpg binary
 *.class binary
 *.vi binary
-
+*.lvproj binary
+*.lvlps binary
+*.lvlib binary
