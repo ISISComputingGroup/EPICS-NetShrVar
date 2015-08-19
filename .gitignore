@@ -9,3 +9,5 @@ envPaths
 cdCommands
 dllPath.bat
 runIoc.bat
+*.tags
+/doc/
