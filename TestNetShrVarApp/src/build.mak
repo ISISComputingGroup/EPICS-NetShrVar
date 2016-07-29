@@ -42,6 +42,10 @@ CVILIB = $(TOP)/NetShrVarApp/src/O.$(EPICS_HOST_ARCH)/CVI/extlib/msvc
 endif
 $(APPNAME)_SYS_LIBS_WIN32 += $(CVILIB)/cvinetv $(CVILIB)/cvisupp $(CVILIB)/cvirt
 
+ifeq ($(STATIC_BUILD),NO)
+USR_LDFLAGS_WIN32 += /NODEFAULTLIB:LIBCMT.LIB /NODEFAULTLIB:LIBCMTD.LIB
+endif
+
 #===========================
 
 include $(TOP)/configure/RULES
