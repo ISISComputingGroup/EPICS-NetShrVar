@@ -25,6 +25,7 @@
 #include <epicsMutex.h>
 #include <epicsThread.h>
 #include <epicsExit.h>
+#include <macLib.h>
 
 #include <cvirte.h>		
 #include <userint.h>
@@ -65,7 +66,9 @@ private:
 	typedef std::map<std::string,NvItem*> params_t;
 	params_t m_params;
 	pugi::xml_document m_xmlconfig;
-
+    MAC_HANDLE* m_mac_env;
+	
+    char* envExpand(const char *str);
 	void getParams();
 	void setValueCNV(const std::string& name, CNVData value);
 	static void epicsExitFunc(void* arg);

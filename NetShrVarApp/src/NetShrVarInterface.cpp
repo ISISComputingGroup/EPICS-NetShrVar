@@ -36,6 +36,7 @@
 #include <epicsGuard.h>
 #include <epicsString.h>
 #include <errlog.h>
+#include <cantProceed.h>
 
 #include "pugixml.hpp"
 
@@ -580,14 +581,61 @@ static void initCV(void*)
 		throw std::runtime_error("InitCVIRTE");
 }
 
+/// expand epics environment strings using previously saved environment  
+/// based on EPICS macEnvExpand()
+char* NetShrVarInterface::envExpand(const char *str)
+{
+    long destCapacity = 128;
+    char *dest = NULL;
+    int n;
+    do {
+        destCapacity *= 2;
+        /*
+         * Use free/malloc rather than realloc since there's no need to
+         * keep the original contents.
+         */
+        free(dest);
+        dest = static_cast<char*>(mallocMustSucceed(destCapacity, "NetShrVarInterface::envExpand"));
+        n = macExpandString(m_mac_env, str, dest, destCapacity);
+    } while (n >= (destCapacity - 1));
+    if (n < 0) {
+        free(dest);
+        dest = NULL;
+    } else {
+        size_t unused = destCapacity - ++n;
+
+        if (unused >= 20)
+            dest = static_cast<char*>(realloc(dest, n));
+    }
+    return dest;
+}
+
 /// \param[in] configSection @copydoc initArg1
 /// \param[in] configFile @copydoc initArg2
 /// \param[in] options @copydoc initArg4
 NetShrVarInterface::NetShrVarInterface(const char *configSection, const char* configFile, int options) : 
-				m_configSection(configSection), m_options(options)		
+				m_configSection(configSection), m_options(options), m_mac_env(NULL)		
 {
 	epicsThreadOnce(&onceId, initCV, NULL);
-	char* configFile_expanded = macEnvExpand(configFile);
+	// load current environment into m_mac_env, this is so we can create a macEnvExpand() equivalent 
+	// but tied to the environment at a specific time. It is useful if we want to load the same 
+	// XML file twice but with a macro defined differently in each case 
+	if (macCreateHandle(&m_mac_env, NULL) != 0)
+	{
+		throw std::runtime_error("Cannot create mac handle");
+	}
+	for(char** cp = environ; *cp != NULL; ++cp)
+	{
+		char* str_tmp = strdup(*cp);
+		char* equals_loc = strchr(str_tmp, '='); // split   name=value   string
+		if (equals_loc != NULL)
+		{
+		    *equals_loc = '\0';
+		    macPutValue(m_mac_env, str_tmp, equals_loc + 1);
+		}
+		free(str_tmp);
+	}
+	char* configFile_expanded = envExpand(configFile);
 	m_configFile = configFile_expanded;
 	epicsAtExit(epicsExitFunc, this);
 
@@ -713,7 +761,7 @@ void NetShrVarInterface::getParams()
 		std::string attr1 = node.node().attribute("name").value();
 		std::string attr2 = node.node().attribute("type").value();
 		std::string attr3 = node.node().attribute("access").value();
-		std::string attr4 = node.node().attribute("netvar").value();
+		std::string attr4 = envExpand(node.node().attribute("netvar").value());
 		std::string attr5 = node.node().attribute("field").value();	
 		if (attr5.size() == 0)
 		{
@@ -808,12 +856,12 @@ void NetShrVarInterface::setValueCNV(const std::string& name, CNVData value)
 	ERROR_CHECK("setValue", error);
 }
 
+/// This is called from a polling loop in the driver to 
 /// update values from buffered subscribers
 void NetShrVarInterface::updateValues()
 {
     CNVBufferDataStatus dataStatus;
 	int status;
-	m_driver->lock();
 	for(params_t::const_iterator it=m_params.begin(); it != m_params.end(); ++it)
 	{
 		const NvItem* item = it->second;
@@ -824,15 +872,15 @@ void NetShrVarInterface::updateValues()
 		else if (item->access & NvItem::BufferedRead)
 		{
 			ScopedCNVData value;
-		    status = CNVGetDataFromBuffer(item->b_subscriber, &value, &dataStatus); 
-			ERROR_CHECK("CNVGetDataFromBuffer", status);
+			status = CNVGetDataFromBuffer(item->b_subscriber, &value, &dataStatus);
+			ERROR_CHECK("CNVGetDataFromBuffer", status); // may throw exception
 			if (dataStatus == CNVNewData || dataStatus == CNVDataWasLost)
 			{
-			    updateParamCNV(item->id, value, false);
+			    updateParamCNV(item->id, value, true);
 			}
 			if (dataStatus == CNVDataWasLost)
 			{
-			    std::cerr << "updateValues: data was lost for param \"" << it->first << "\" (" << item->nv_name << ")" << std::endl;
+			    std::cerr << "updateValues: BufferedReader: data was lost for param \"" << it->first << "\" (" << item->nv_name << ") - is poll frequency too low?" << std::endl;
 			}
 		}
 		else
@@ -840,8 +888,10 @@ void NetShrVarInterface::updateValues()
 		    ; // we have not explicitly defined a reader
 		}
 	}
-	m_driver->callParamCallbacks();
-	m_driver->unlock();
+// we used to pass false to updateParamCNV and do callParamCallbacks here
+//	m_driver->lock();
+//	m_driver->callParamCallbacks();
+//	m_driver->unlock();
 }
 
 /// Helper for EPICS driver report function

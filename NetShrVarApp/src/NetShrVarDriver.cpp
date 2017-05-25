@@ -256,8 +256,8 @@ NetShrVarDriver::NetShrVarDriver(NetShrVarInterface* netvarint, int poll_ms, con
 	: asynPortDriver(portName, 
 	0, /* maxAddr */ 
 	static_cast<int>(netvarint->nParams()),
-	asynInt32Mask | asynInt32ArrayMask | asynFloat64Mask | asynFloat64ArrayMask | asynOctetMask | asynDrvUserMask, /* Interface mask */
-	asynInt32Mask | asynInt32ArrayMask | asynFloat64Mask | asynFloat64ArrayMask | asynOctetMask,  /* Interrupt mask */
+	asynInt32Mask | asynInt8ArrayMask | asynInt16ArrayMask | asynInt32ArrayMask | asynFloat64Mask | asynFloat32ArrayMask | asynFloat64ArrayMask | asynOctetMask | asynDrvUserMask, /* Interface mask */
+	asynInt32Mask | asynInt8ArrayMask | asynInt16ArrayMask | asynInt32ArrayMask | asynFloat64Mask | asynFloat32ArrayMask | asynFloat64ArrayMask | asynOctetMask,  /* Interrupt mask */
 	ASYN_CANBLOCK, /* asynFlags.  This driver can block but it is not multi-device */
 	1, /* Autoconnect */
 	0, /* Default priority */
@@ -348,7 +348,7 @@ extern "C" {
 	static const iocshArg initArg0 = { "portName", iocshArgString};			///< The name of the asyn driver port we will create
 	static const iocshArg initArg1 = { "configSection", iocshArgString};	///< section name of \a configFile to use to configure this asyn port
 	static const iocshArg initArg2 = { "configFile", iocshArgString};		///< Path to the XML input file to load configuration information from
-	static const iocshArg initArg3 = { "pollPeriod", iocshArgInt};			    ///< poll period (ms)
+	static const iocshArg initArg3 = { "pollPeriod", iocshArgInt};			///< poll period (ms) for BufferedReaders
 	static const iocshArg initArg4 = { "options", iocshArgInt};			    ///< options as per #NetShrVarOptions enum
 
 	static const iocshArg * const initArgs[] = { &initArg0,
