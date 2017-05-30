@@ -128,9 +128,11 @@ struct NvItem
 	CNVBufferedSubscriber b_subscriber;
 	CNVWriter writer;
 	CNVBufferedWriter b_writer;
+	epicsTimeStamp epicsTS; ///< timestamp of shared variable update
 	NvItem(const char* nv_name_, const char* type_, unsigned access_, int field_) : nv_name(nv_name_), type(type_), access(access_),
 		field(field_), id(-1), subscriber(0), b_subscriber(0), writer(0), b_writer(0)
 	{ 
+	    memset(&epicsTS, 0, sizeof(epicsTS));
 	    std::replace(nv_name.begin(), nv_name.end(), '/', '\\'); // we accept / as well as \ in the XML file for path to variable
 	}
 	/// helper for asyn driver report function
@@ -145,6 +147,12 @@ struct NvItem
 		{
 			fprintf(fp, "  Network variable structure index: %d\n", field);
 		}
+		char tbuffer[60];
+		if (epicsTimeToStrftime(tbuffer, sizeof(tbuffer), "%Y-%m-%d %H:%M:%S.%06f", &epicsTS) <= 0)
+		{
+			strcpy(tbuffer, "<unknown>");
+		}
+		fprintf(fp, "  Update time: %s\n", tbuffer);
 	    report(fp, "subscriber", subscriber, false);
 	    report(fp, "buffered subscriber", b_subscriber, true);
 	    report(fp, "writer", writer, false);
@@ -308,11 +316,12 @@ void NetShrVarInterface::dataCallback (void * handle, CNVData data, CallbackData
 }
 
 template<typename T>
-void NetShrVarInterface::updateParamValue(int param_index, T val, bool do_asyn_param_callbacks)
+void NetShrVarInterface::updateParamValue(int param_index, T val, epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks)
 {
 	const char *paramName = NULL;
 	m_driver->getParamName(param_index, &paramName);
 	m_driver->lock();
+	m_driver->setTimeStamp(epicsTS);
 	if (m_params[paramName]->type == "float64")
 	{
 	    m_driver->setDoubleParam(param_index, convertToScalar<double>(val));
@@ -356,11 +365,13 @@ void NetShrVarInterface::updateParamArrayValueImpl(int param_index, T* val, size
 }
 
 template<typename T>
-void NetShrVarInterface::updateParamArrayValue(int param_index, T* val, size_t nElements)
+void NetShrVarInterface::updateParamArrayValue(int param_index, T* val, size_t nElements, epicsTimeStamp* epicsTS)
 {
 	const char *paramName = NULL;
 	m_driver->getParamName(param_index, &paramName);
 	m_driver->lock();
+	m_driver->setTimeStamp(epicsTS);
+	m_params[paramName]->epicsTS = *epicsTS;
 	if (m_params[paramName]->type == "float64array")
 	{
 		updateParamArrayValueImpl<T,epicsFloat64>(param_index, val, nElements);
@@ -388,6 +399,7 @@ void NetShrVarInterface::updateParamArrayValue(int param_index, T* val, size_t n
 	m_driver->unlock();
 }
 
+/// called externally with m_driver locked
 template <typename T> 
 void NetShrVarInterface::readArrayValue(const char* paramName, T* value, size_t nElements, size_t* nIn)
 {
@@ -399,17 +411,23 @@ void NetShrVarInterface::readArrayValue(const char* paramName, T* value, size_t 
 	}
 	*nIn = n;
 	memcpy(value, &(array_data[0]), n * sizeof(T));
+	m_driver->setTimeStamp(&(m_params[paramName]->epicsTS));
 }
 
 template<CNVDataType cnvType>
 void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, bool do_asyn_param_callbacks)
 {
+    unsigned __int64 timestamp;
+	epicsTimeStamp epicsTS;
+    int status = CNVGetDataUTCTimestamp(data, &timestamp);
+	ERROR_CHECK("CNVGetDataUTCTimestamp", status);
+	convertTimeStamp(timestamp, &epicsTS);	
 	if (nDims == 0)
 	{
 	    typename CNV2C<cnvType>::ctype val;
 	    int status = CNVGetScalarDataValue (data, type, &val);
 	    ERROR_CHECK("CNVGetScalarDataValue", status);
-	    updateParamValue(param_index, val, do_asyn_param_callbacks);
+	    updateParamValue(param_index, val, &epicsTS, do_asyn_param_callbacks);
         CNV2C<cnvType>::free(val);
 	}
 	else
@@ -426,9 +444,32 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 		val = new typename CNV2C<cnvType>::ctype[nElements];
 		status = CNVGetArrayDataValue(data, type, val, nElements);
 	    ERROR_CHECK("CNVGetArrayDataValue", status);
-	    updateParamArrayValue(param_index, val, nElements);
+	    updateParamArrayValue(param_index, val, nElements, &epicsTS);
 		delete[] val;
 	}
+}
+
+/// convert a timestamp obtained from CNVGetDataUTCTimestamp() into an EPICS timestamp
+/// timestamp has 100ns granuality
+void NetShrVarInterface::convertTimeStamp(unsigned __int64 timestamp, epicsTimeStamp *epicsTS)
+{
+    int year, month, day, hour, minute;
+    double second;
+    int status = CNVGetTimestampInfo(timestamp, &year, &month, &day, &hour, &minute, &second);
+	ERROR_CHECK("CNVGetTimestampInfo", status);
+	struct tm tms;
+	memset(&tms, 0, sizeof(tms));
+	tms.tm_year = year - 1900;
+	tms.tm_mon = month - 1;
+    tms.tm_mday = day;
+    tms.tm_hour = hour;
+    tms.tm_min = minute;
+    tms.tm_sec = static_cast<int>(floor(second));
+	unsigned long nanosec = static_cast<unsigned long>(floor((second - floor(second)) * 1.e9 + 0.5));
+	epicsTimeFromGMTM(epicsTS, &tms, nanosec);
+// debugging check
+//	char buffer[60];
+//	epicsTimeToStrftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S.%06f", epicsTS);
 }
 
 void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_asyn_param_callbacks)
@@ -437,10 +478,7 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_
 	unsigned int	serverError;
 	CNVDataType		type;
     CNVDataQuality quality;
-    unsigned __int64 timestamp;
-    int year, month, day, hour, minute, good;
-    double second;
-	int status;
+	int good, status;
 	unsigned short numberOfFields = 0;
 	const char *paramName = NULL;
 	m_driver->getParamName(param_index, &paramName);
@@ -475,10 +513,6 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_
 	ERROR_CHECK("CNVGetDataQuality", status);
     status = CNVCheckDataQuality(quality, &good);
 	ERROR_CHECK("CNVCheckDataQuality", status);
-    status = CNVGetDataUTCTimestamp(data, &timestamp);
-	ERROR_CHECK("CNVGetDataUTCTimestamp", status);
-    status = CNVGetTimestampInfo(timestamp, &year, &month, &day, &hour, &minute, &second);
-	ERROR_CHECK("CNVGetTimestampInfo", status);
     if (good == 0)
     {
         std::cerr << "updateParamCNV: data for param " << paramName << " is not good quality: " << dataQuality(quality) << std::endl;

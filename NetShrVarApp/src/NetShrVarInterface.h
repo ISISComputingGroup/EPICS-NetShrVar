@@ -74,8 +74,9 @@ private:
 	static void epicsExitFunc(void* arg);
 	bool checkOption(NetShrVarOptions option) { return ( m_options & static_cast<int>(option) ) != 0; }
 	void connectVars();
-	template<typename T> void updateParamValue(int param_index, T val, bool do_asyn_param_callbacks);
-	template<typename T> void updateParamArrayValue(int param_index, T* val, size_t nElements);
+    void convertTimeStamp(unsigned __int64 timestamp, epicsTimeStamp *epicsTS);
+	template<typename T> void updateParamValue(int param_index, T val, epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks);
+	template<typename T> void updateParamArrayValue(int param_index, T* val, size_t nElements, epicsTimeStamp* epicsTS);
 	void updateParamCNV (int param_index, CNVData data, bool do_asyn_param_callbacks);
 	template<CNVDataType cnvType> void updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, bool do_asyn_param_callbacks);
 	template<typename T,typename U> void updateParamArrayValueImpl(int param_index, T* val, size_t nElements);

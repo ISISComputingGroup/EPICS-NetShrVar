@@ -180,6 +180,7 @@ asynStatus NetShrVarDriver::readInt8Array(asynUser *pasynUser, epicsInt8 *value,
 template<typename T>
 asynStatus NetShrVarDriver::readArrayValue(asynUser *pasynUser, const char* functionName, T *value, size_t nElements, size_t *nIn)
 {
+	epicsTimeStamp epicsTS;
 	int function = pasynUser->reason;
 	asynStatus status = asynSuccess;
 	const char *paramName = NULL;
@@ -190,7 +191,9 @@ asynStatus NetShrVarDriver::readArrayValue(asynUser *pasynUser, const char* func
 		{
 			throw std::runtime_error("m_netvarint is NULL");
 		}
-		m_netvarint->readArrayValue(paramName, value, nElements, nIn);
+		m_netvarint->readArrayValue(paramName, value, nElements, nIn); // this will also update driver timestamp
+		getTimeStamp(&epicsTS);
+		pasynUser->timestamp = epicsTS;
 		asynPrint(pasynUser, ASYN_TRACEIO_DRIVER, 
 			"%s:%s: function=%d, name=%s, size=%d\n", 
 			driverName, functionName, function, paramName, (int)nElements);
