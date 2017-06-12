@@ -15,6 +15,8 @@ DBD += $(APPNAME).dbd
 
 # TestNetShrVar.dbd will be made up from these files:
 $(APPNAME)_DBD += base.dbd
+$(APPNAME)_DBD += asyn.dbd
+$(APPNAME)_DBD += asSupport.dbd
 $(APPNAME)_DBD += NetShrVar.dbd
 
 # Add all the support libraries needed by this IOC

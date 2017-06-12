@@ -1,4 +1,1 @@
-include "base.dbd"
-include "asyn.dbd"
-include "asSupport.dbd"
 registrar(NetShrVarRegister)
