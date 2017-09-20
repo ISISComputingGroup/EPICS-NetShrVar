@@ -218,15 +218,48 @@ void NetShrVarInterface::connectVars()
 		std::cerr << "connectVars: Variable engine is not running" << std::endl;
     }
 #endif
+    char** processes = NULL;
+	int numberOfProcesses = 0;
+	int isRunning = 0;
+    error = CNVGetProcesses(&processes, &numberOfProcesses);
+	ERROR_CHECK("CNVGetProcesses", error);
+	std::cerr << "connectVars: NSV processes on machine:";
+	for(int i=0; i<numberOfProcesses; ++i)
+	{
+		error = CNVProcessIsRunning(processes[i], &isRunning);
+	    ERROR_CHECK("CNVProcessIsRunning", error);
+		std::cerr << " \"" << processes[i] << "\" (" << (isRunning != 0 ? "RUNNING" : "NOT RUNNING") << ")";
+	}
+	std::cerr << std::endl;
+	CNVFreeMemory(processes);
+	
 	for(params_t::const_iterator it=m_params.begin(); it != m_params.end(); ++it)
 	{
 		NvItem* item = it->second;
 	    cb_data = new CallbackData(this, item->nv_name, item->id);
 		
-		// check variable exists and create if not???
-		
-		// create either reader or buffered reader
 		std::cerr << "connectVars: connecting to \"" << item->nv_name << "\"" << std::endl;
+
+		// create if not exists??
+		int exists = 0;
+		size_t proc_pos = item->nv_name.find('\\', 2); // 2 for after \\ in \\localhost
+		size_t var_pos = item->nv_name.rfind('\\');
+		if (proc_pos != std::string::npos && var_pos != std::string::npos)
+		{
+			std::string proc_name = item->nv_name.substr(proc_pos + 1, var_pos - proc_pos);
+			std::string var_name = item->nv_name.substr(var_pos + 1);
+		    error = CNVVariableExists(proc_name.c_str(), var_name.c_str(), &exists);
+	        ERROR_CHECK("CNVVariableExists", error);
+			if (exists == 0)
+			{
+				std::cerr << "connectVars: process \"" << proc_name << "\" variable \"" << var_name << "\" does not exist on localhost" << std::endl;
+			}
+		}
+		else
+		{
+			std::cerr << "connectVars: cannot parse \"" << item->nv_name << "\"" << std::endl;
+		}
+		// create either reader or buffered reader
 		if (item->access & NvItem::Read)
 		{
 	        error = CNVCreateSubscriber(item->nv_name.c_str(), DataCallback, StatusCallback, cb_data, waitTime, 0, &(item->subscriber));
