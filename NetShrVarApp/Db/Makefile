@@ -10,7 +10,7 @@ include $(TOP)/configure/CONFIG
 #----------------------------------------------------
 # Create and install (or just install) into <top>/db
 # databases, templates, substitutions like this
-#DB += xxx.db
+DB += NetShrVar_boolean.template NetShrVar_float64.template NetShrVar_int32.template NetShrVar_string.template
 
 #----------------------------------------------------
 # If <anyname>.db template is not named <anyname>*.template add
