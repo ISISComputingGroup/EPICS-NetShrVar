@@ -1,0 +1,23 @@
+# % macro, P, device prefix
+# % macro, PORT, asyn port
+# % macro, RPARAM, asyn read param
+# % macro, SPARAM, asyn set param
+record(bi, "$(P)$(PARAM)")
+{
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn($(PORT),0,0)$(RPARAM)")
+    field(SCAN, "$(SCAN)")
+    field(ZNAM, "$(ZNAME=0)")
+    field(ONAM, "$(ONAME=1)")
+}
+
+record(bo, "$(P)$(PARAM):SP")
+{
+    field(DTYP, "asynInt32")
+    field(OUT,  "@asyn($(PORT),0,0)$(SPARAM)")
+    field(SCAN, "Passive")
+    field(ZNAM, "$(ZNAME=0)")
+    field(ONAM, "$(ONAME=1)")
+}
+
+#

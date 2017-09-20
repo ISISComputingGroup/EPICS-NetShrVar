@@ -1,0 +1,40 @@
+# % macro, P, device prefix
+# % macro, PORT, asyn port
+# % macro, RPARAM, asyn read param
+# % macro, SPARAM, asyn set param
+
+record(stringin, "$(P)$(PARAM)")
+{
+    field(DTYP, "asynOctetRead")
+    field(INP,  "@asyn($(PORT),0,0)$(RPARAM)")
+    field(SCAN, "$(SCAN)")
+}
+
+record(stringout, "$(P)$(PARAM):SP")
+{
+    field(DTYP, "asynOctetWrite")
+    field(OUT,  "@asyn($(PORT),0,0)$(SPARAM)")
+    field(SCAN, "Passive")
+}
+
+# read
+record(waveform, "$(P)$(PARAM)WF")
+{
+    field(DTYP, "asynOctetRead")
+    field(INP,  "@asyn($(PORT),0,0)$(RPARAM)")
+    field(SCAN, "$(SCAN)")
+    field(FTVL, "CHAR")
+    field(NELM, 256)
+}
+
+# write
+record(waveform, "$(P)$(PARAM)WF:SP")
+{
+    field(DTYP, "asynOctetWrite")
+    field(INP,  "@asyn($(PORT),0,0)$(SPARAM)")
+    field(SCAN, "Passive")
+    field(FTVL, "CHAR")
+    field(NELM, 256)
+}
+
+#

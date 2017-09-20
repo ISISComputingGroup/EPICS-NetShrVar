@@ -1,0 +1,24 @@
+# % macro, P, device prefix
+# % macro, PORT, asyn port
+# % macro, RPARAM, asyn read param
+# % macro, SPARAM, asyn set param
+
+record(ai, "$(P)$(PARAM)")
+{
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn($(PORT),0,0)$(RPARAM)")
+    field(SCAN, "$(SCAN)")
+    field(PREC, "3")
+    field(EGU, "$(EGU)")
+}
+
+record(ao, "$(P)$(PARAM):SP")
+{
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn($(PORT),0,0)$(SPARAM)")
+    field(SCAN, "Passive")
+    field(PREC, "3")
+    field(EGU, "$(EGU)")
+}
+
+#
