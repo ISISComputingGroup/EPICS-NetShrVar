@@ -56,6 +56,7 @@ record(longin, "$(P)ind1_RBV")
     field(DTYP, "asynInt32")
     field(INP,  "@asyn(nsv,0,0)ind1")
     field(SCAN, "I/O Intr")
+	field(TSE, -2)
 }
 
 # Write Network shared variable "//localhost/example/some_indicator" 
@@ -131,29 +132,45 @@ record(bo, "$(P)bool1")
 }
 
 
-# Read Network shared variable "//localhost/example/some_array" 
 record(waveform, "$(P)array1_RBV")
 {
-    field(DESC, "NSV '//localhost/example/some_array'")
+    field(DTYP, "asynInt16ArrayIn")
+	field(FTVL, "SHORT")
+	field(NELM, 1000)
+    field(INP,  "@asyn(nsv,0,0)arrayU16")
+    field(PREC, "3")
+    field(SCAN, "I/O Intr")
+	field(TSE, -2)
+}
+
+record(waveform, "$(P)array1")
+{
+    field(DTYP, "asynInt16ArrayOut")
+	field(FTVL, "SHORT")
+	field(NELM, 1000)
+    field(INP,  "@asyn(nsv,0,0)arrayU16")
+    field(PREC, "3")
+}
+
+record(waveform, "$(P)array2_RBV")
+{
     field(DTYP, "asynFloat64ArrayIn")
 	field(FTVL, "DOUBLE")
 	field(NELM, 1000)
-    field(INP,  "@asyn(nsv,0,0)array1")
+    field(INP,  "@asyn(nsv,0,0)arrayDble")
     field(PREC, "3")
     field(SCAN, "I/O Intr")
+	field(TSE, -2)
 }
 
-# Write Network shared variable "//localhost/example/some_array" 
-record(waveform, "$(P)array1")
+record(waveform, "$(P)array2")
 {
-    field(DESC, "NSV '//localhost/example/some_array'")
     field(DTYP, "asynFloat64ArrayOut")
 	field(FTVL, "DOUBLE")
 	field(NELM, 1000)
-    field(INP,  "@asyn(nsv,0,0)array1")
+    field(INP,  "@asyn(nsv,0,0)arrayDble")
     field(PREC, "3")
 }
-
 
 # Read Network shared variable "//localhost/example/some_struct"  struct field index 1
 record(ai, "$(P)struct1_RBV")
