@@ -1,5 +1,7 @@
 Edit configure/RELEASE and set locations of ASYN and EPICS_BASE
 
-Check definition of NICVIDIR in NetShrVarApp/src/Makefile - it defaults to /usr/local/natinst/cvi2013. This is where the CVI headers have been installed.
+Check definition of NICVIDIR in NetShrVarApp/src/Makefile - it defaults to /usr/local/natinst/cvi2013. 
+(This is where the CVI headers have been installed)
 
-Check definition of CVILIB in NetShrVarApp/src/Makefile - it defaults to /usr/local/lib. This is where CVI libraries are usually installed.
+Check definition of CVILIB in NetShrVarApp/src/Makefile - it defaults to /usr/local/lib. 
+(This is where CVI libraries are usually installed)
