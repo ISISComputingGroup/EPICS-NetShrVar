@@ -2,4 +2,4 @@ An EPICS support module to access [National Instruments Network Shared Variables
 
 For full documentation see the [ISIS EPICS Homepage](http://epics.isis.stfc.ac.uk/)
 
-See README.build for brief building instructions
+See [README.build](https://github.com/ISISComputingGroup/EPICS-NetShrVar/blob/master/README.build) for brief building instructions
