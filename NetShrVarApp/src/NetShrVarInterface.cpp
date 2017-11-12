@@ -207,7 +207,7 @@ void NetShrVarInterface::connectVars()
 {
 	int error;
 	CallbackData* cb_data;
-	int waitTime = 3000;
+	int waitTime = 3000; // in milliseconds, or CNVWaitForever 
 	int clientBufferMaxItems = 200;
 #ifdef _WIN32
     int running = 0;
@@ -681,7 +681,9 @@ char* NetShrVarInterface::envExpand(const char *str)
 /// \param[in] configFile @copydoc initArg2
 /// \param[in] options @copydoc initArg4
 NetShrVarInterface::NetShrVarInterface(const char *configSection, const char* configFile, int options) : 
-				m_configSection(configSection), m_options(options), m_mac_env(NULL)		
+				m_configSection(configSection), m_options(options), m_mac_env(NULL), 
+				m_writer_wait_ms(5000/*CNVWaitForever/*CNVDoNotWait*/), 
+				m_b_writer_wait_ms(CNVDoNotWait/*CNVWaitForever/*CNVDoNotWait*/)
 {
 	epicsThreadOnce(&onceId, initCV, NULL);
 	// load current environment into m_mac_env, this is so we can create a macEnvExpand() equivalent 
@@ -901,7 +903,6 @@ void NetShrVarInterface::setArrayValue(const char* param, const T* value, size_t
 
 void NetShrVarInterface::setValueCNV(const std::string& name, CNVData value)
 {
-    int wait_ms = CNVWaitForever/*CNVDoNotWait*/, b_wait_ms = CNVDoNotWait/*CNVWaitForever*/;
 	NvItem* item = m_params[name];
 	int error = 0;
 	if (item->field != -1)
@@ -910,11 +911,11 @@ void NetShrVarInterface::setValueCNV(const std::string& name, CNVData value)
 	}
 	if (item->access & NvItem::Write)
 	{
-	    error = CNVWrite(item->writer, value, wait_ms);
+	    error = CNVWrite(item->writer, value, m_writer_wait_ms);
 	}
 	else if (item->access & NvItem::BufferedWrite)
 	{
-	    error = CNVPutDataInBuffer(item->b_writer, value, b_wait_ms);
+	    error = CNVPutDataInBuffer(item->b_writer, value, m_b_writer_wait_ms);
 	}
 	else
 	{

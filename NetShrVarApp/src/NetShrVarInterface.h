@@ -67,6 +67,8 @@ private:
 	params_t m_params;
 	pugi::xml_document m_xmlconfig;
     MAC_HANDLE* m_mac_env;
+	int m_writer_wait_ms; ///< how long to wait for a write operation to complete in milliseconds
+	int m_b_writer_wait_ms; ///< how long to wait for a buffered write operation to complete in milliseconds
 	
     char* envExpand(const char *str);
 	void getParams();
