@@ -14,6 +14,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <comutil.h>
+#else
+#include <math.h>
+#include <unistd.h>
 #endif /* _WIN32 */
 
 #include <string>
@@ -217,7 +220,6 @@ void NetShrVarInterface::connectVars()
     {
 		std::cerr << "connectVars: Variable engine is not running" << std::endl;
     }
-#endif
     char** processes = NULL;
 	int numberOfProcesses = 0;
 	int isRunning = 0;
@@ -232,6 +234,7 @@ void NetShrVarInterface::connectVars()
 	}
 	std::cerr << std::endl;
 	CNVFreeMemory(processes);
+#endif
 	
 	for(params_t::const_iterator it=m_params.begin(); it != m_params.end(); ++it)
 	{
@@ -239,7 +242,7 @@ void NetShrVarInterface::connectVars()
 	    cb_data = new CallbackData(this, item->nv_name, item->id);
 		
 		std::cerr << "connectVars: connecting to \"" << item->nv_name << "\"" << std::endl;
-
+#ifdef _WIN32
 		// create if not exists??
 		int exists = 0;
 		size_t proc_pos = item->nv_name.find('\\', 2); // 2 for after \\ in \\localhost
@@ -259,6 +262,7 @@ void NetShrVarInterface::connectVars()
 		{
 			std::cerr << "connectVars: cannot parse \"" << item->nv_name << "\"" << std::endl;
 		}
+#endif
 		// create either reader or buffered reader
 		if (item->access & NvItem::Read)
 		{
@@ -454,7 +458,10 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 	epicsTimeStamp epicsTS;
     int status = CNVGetDataUTCTimestamp(data, &timestamp);
 	ERROR_CHECK("CNVGetDataUTCTimestamp", status);
-	convertTimeStamp(timestamp, &epicsTS);	
+	if (!convertTimeStamp(timestamp, &epicsTS))
+        {
+            epicsTimeGetCurrent(&epicsTS);
+        }
 	if (nDims == 0)
 	{
 	    typename CNV2C<cnvType>::ctype val;
@@ -484,12 +491,16 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 
 /// convert a timestamp obtained from CNVGetDataUTCTimestamp() into an EPICS timestamp
 /// timestamp has 100ns granuality
-void NetShrVarInterface::convertTimeStamp(unsigned __int64 timestamp, epicsTimeStamp *epicsTS)
+bool NetShrVarInterface::convertTimeStamp(unsigned __int64 timestamp, epicsTimeStamp *epicsTS)
 {
     int year, month, day, hour, minute;
     double second;
     int status = CNVGetTimestampInfo(timestamp, &year, &month, &day, &hour, &minute, &second);
-	ERROR_CHECK("CNVGetTimestampInfo", status);
+    if (status < 0)
+    {
+//	std::cerr << "convertTimestamp " << status << ": " << CNVGetErrorDescription(status) << std::endl;
+        return false;
+    }
 	struct tm tms;
 	memset(&tms, 0, sizeof(tms));
 	tms.tm_year = year - 1900;
@@ -503,6 +514,7 @@ void NetShrVarInterface::convertTimeStamp(unsigned __int64 timestamp, epicsTimeS
 // debugging check
 //	char buffer[60];
 //	epicsTimeToStrftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S.%06f", epicsTS);
+    return true;
 }
 
 void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_asyn_param_callbacks)
@@ -643,9 +655,11 @@ static epicsThreadOnceId onceId = EPICS_THREAD_ONCE_INIT;
 
 static void initCV(void*)
 {
+#ifdef _WIN32
     char* dummy_argv[2] = { strdup("NetShrVarInterface"), NULL };
 	if (InitCVIRTE (0, dummy_argv, 0) == 0)
 		throw std::runtime_error("InitCVIRTE");
+#endif
 }
 
 /// expand epics environment strings using previously saved environment  
@@ -682,8 +696,8 @@ char* NetShrVarInterface::envExpand(const char *str)
 /// \param[in] options @copydoc initArg4
 NetShrVarInterface::NetShrVarInterface(const char *configSection, const char* configFile, int options) : 
 				m_configSection(configSection), m_options(options), m_mac_env(NULL), 
-				m_writer_wait_ms(5000/*CNVWaitForever/*CNVDoNotWait*/), 
-				m_b_writer_wait_ms(CNVDoNotWait/*CNVWaitForever/*CNVDoNotWait*/)
+				m_writer_wait_ms(5000/*also CNVWaitForever or CNVDoNotWait*/), 
+				m_b_writer_wait_ms(CNVDoNotWait/*also CNVWaitForever or CNVDoNotWait*/)
 {
 	epicsThreadOnce(&onceId, initCV, NULL);
 	// load current environment into m_mac_env, this is so we can create a macEnvExpand() equivalent 
