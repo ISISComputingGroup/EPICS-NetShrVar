@@ -40,6 +40,7 @@
 #include <epicsString.h>
 #include <errlog.h>
 #include <cantProceed.h>
+#include <epicsTime.h>
 
 #include "pugixml.hpp"
 
