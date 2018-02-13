@@ -72,6 +72,30 @@ asynStatus NetShrVarDriver::writeValue(asynUser *pasynUser, const char* function
 	}
 }
 
+asynStatus NetShrVarDriver::readValue(asynUser *pasynUser, const char* functionName)
+{
+	int function = pasynUser->reason;
+	const char *paramName = NULL;
+	getParamName(function, &paramName);
+	try
+	{
+		if (m_netvarint == NULL)
+		{
+			throw std::runtime_error("m_netvarint is NULL");
+		}
+		m_netvarint->readValue(paramName);
+		// ASYN_TRACEIO_DRIVER done by function calling us
+		return asynSuccess;
+	}
+	catch(const std::exception& ex)
+	{
+		epicsSnprintf(pasynUser->errorMessage, pasynUser->errorMessageSize, 
+			"%s:%s: function=%d, name=%s, error=%s", 
+			driverName, functionName, function, paramName, ex.what());
+		return asynError;
+	}
+}
+
 /// write an array to the driver
 /// @tparam T Data type of \a value
 /// @param[in] pasynUser pointer to AsynUser instance
@@ -119,6 +143,78 @@ asynStatus NetShrVarDriver::writeInt32(asynUser *pasynUser, epicsInt32 value)
 {
 	asynStatus status = writeValue(pasynUser, "writeInt32", value);
 	return (status == asynSuccess ? asynPortDriver::writeInt32(pasynUser, value) : status);
+}
+
+asynStatus NetShrVarDriver::readFloat64(asynUser *pasynUser, epicsFloat64 *value)
+{
+	static const char* functionName = "readFloat64";
+	int function = pasynUser->reason;
+	const char *paramName = NULL;
+	getParamName(function, &paramName);
+	asynStatus status = readValue(pasynUser, functionName);
+	if (status == asynSuccess)
+	{
+		asynPortDriver::readFloat64(pasynUser, value);
+		asynPrint(pasynUser, ASYN_TRACEIO_DRIVER, 
+				"%s:%s: function=%d, name=%s, value=%f\n", 
+				driverName, functionName, function, paramName, *value);
+	}
+	return status;
+}
+
+asynStatus NetShrVarDriver::readInt32(asynUser *pasynUser, epicsInt32 *value)
+{
+	static const char* functionName = "readInt32";
+	int function = pasynUser->reason;
+	const char *paramName = NULL;
+	getParamName(function, &paramName);
+	asynStatus status = readValue(pasynUser, functionName);
+	if (status == asynSuccess)
+	{
+		asynPortDriver::readInt32(pasynUser, value);
+		asynPrint(pasynUser, ASYN_TRACEIO_DRIVER, 
+				"%s:%s: function=%d, name=%s, value=%d\n", 
+				driverName, functionName, function, paramName, *value);
+	}
+	return status;
+}
+
+asynStatus NetShrVarDriver::readOctet(asynUser *pasynUser, char *value, size_t maxChars, size_t *nActual, int *eomReason)
+{
+	static const char *functionName = "readOctet";
+	int function = pasynUser->reason;
+	const char *paramName = NULL;
+	getParamName(function, &paramName);
+	asynStatus status = readValue(pasynUser, functionName);
+	if (status == asynSuccess)
+	{
+		std::string value_s;
+		getStringParam(function, value_s);
+		if ( value_s.size() > maxChars ) // did we read more than we have space for?
+		{
+			*nActual = maxChars;
+			if (eomReason) { *eomReason = ASYN_EOM_CNT | ASYN_EOM_END; }
+			asynPrint(pasynUser, ASYN_TRACEIO_DRIVER, 
+				"%s:%s: function=%d, name=%s, value=\"%s\" (TRUNCATED from %d chars)\n", 
+				driverName, functionName, function, paramName, value_s.substr(0,*nActual).c_str(), value_s.size());
+		}
+		else
+		{
+			*nActual = value_s.size();
+			if (eomReason) { *eomReason = ASYN_EOM_END; }
+			asynPrint(pasynUser, ASYN_TRACEIO_DRIVER, 
+				"%s:%s: function=%d, name=%s, value=\"%s\"\n", 
+				driverName, functionName, function, paramName, value_s.c_str());
+		}
+		strncpy(value, value_s.c_str(), maxChars); // maxChars  will NULL pad if possible, change to  *nActual  if we do not want this
+	}
+	else
+	{
+		*nActual = 0;
+		if (eomReason) { *eomReason = ASYN_EOM_END; }
+		value[0] = '\0';
+	}
+	return status;
 }
 
 asynStatus NetShrVarDriver::writeOctet(asynUser *pasynUser, const char *value, size_t maxChars, size_t *nActual)

@@ -23,7 +23,8 @@
 
 	  <!--
 	      <param> defines as asyn driver parameter "name" that can be specified in an epics record to access data.		  
-		  "access" is a comma separated list of how the shared variable is accessed: R (reader), BR (buffered reader), W (writer), BW (buffered writer)
+		  "access" is a comma separated list of how the shared variable is accessed: 
+		             R (reader), BR (buffered reader), SR (single reader), W (writer), BW (buffered writer)
 		  "type" is the asyn parameter type - single values need not be identical to the shared variable type, but
 		          must be compatible (i.e. numeric if shared variable is numeric). Array types must match
                   in data type size, but need not match in signedness (EPICS does not have 
@@ -37,7 +38,9 @@
 	
 	  <param name="icont1" type="int32" access="R,W" netvar="//localhost/example/some_control" /> 
 
-          <param name="ind1" type="int32" access="R,BW" netvar="//localhost/example/some_indicator" />
+      <param name="ind1" type="int32" access="R,BW" netvar="//localhost/example/some_indicator" />
+
+      <param name="ind2" type="int32" access="SR" netvar="//localhost/example/some_indicator2" />
 
 	  <param name="strcont1" type="string" access="BR,BW" netvar="//localhost/example/some_string" /> 
 	 

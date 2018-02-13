@@ -30,6 +30,9 @@ public:
 	virtual asynStatus writeInt32Array(asynUser *pasynUser, epicsInt32 *value, size_t nElements); 
 	virtual asynStatus writeFloat32Array(asynUser *pasynUser, epicsFloat32 *value, size_t nElements); 
 	virtual asynStatus writeFloat64Array(asynUser *pasynUser, epicsFloat64 *value, size_t nElements); 
+	virtual asynStatus readInt32(asynUser *pasynUser, epicsInt32 *value);
+	virtual asynStatus readFloat64(asynUser *pasynUser, epicsFloat64 *value);
+	virtual asynStatus readOctet(asynUser *pasynUser, char *value, size_t maxChars, size_t *nActual, int *eomReason);
 	virtual asynStatus readFloat32Array(asynUser *pasynUser, epicsFloat32 *value, size_t nElements, size_t *nIn);
 	virtual asynStatus readFloat64Array(asynUser *pasynUser, epicsFloat64 *value, size_t nElements, size_t *nIn);
 	virtual asynStatus readInt8Array(asynUser *pasynUser, epicsInt8 *value, size_t nElements, size_t *nIn);
@@ -50,6 +53,7 @@ private:
 	int m_poll_ms;
 	bool m_shutting_down;
 
+	asynStatus readValue(asynUser *pasynUser, const char* functionName);
 	template<typename T> asynStatus writeValue(asynUser *pasynUser, const char* functionName, T value);
 	template<typename T> asynStatus writeArrayValue(asynUser *pasynUser, const char* functionName, T* value, size_t nElements);
 	template<typename T> asynStatus readArrayValue(asynUser *pasynUser, const char* functionName, T *value, size_t nElements, size_t *nIn);

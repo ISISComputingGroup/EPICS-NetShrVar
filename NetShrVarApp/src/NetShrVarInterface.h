@@ -50,13 +50,15 @@ public:
 	void updateValues();
 	void createParams(asynPortDriver* driver);
 	void report(FILE* fp, int details);
+	void readValue(const char* param);
 	template<typename T> void setValue(const char* param, const T& value);
 	template<typename T> void setArrayValue(const char* param, const T* value, size_t nElements);
 	void dataTransferredCallback (void * handle, int error, CallbackData* cb_data);
 	void dataCallback (void * handle, CNVData data, CallbackData* cb_data);
 	void statusCallback (void * handle, CNVConnectionStatus status, int error, CallbackData* cb_data);
-	template <typename T> void readArrayValue(const char* paramName, T* value, size_t nElements, size_t* nIn);
-    
+	template<typename T> void readArrayValue(const char* paramName, T* value, size_t nElements, size_t* nIn);
+    template<typename T> void getAsynParamValue(int param, T& value);
+  
 private:
 	std::string m_configSection;  ///< section of \a configFile to load information from
 	std::string m_configFile;   

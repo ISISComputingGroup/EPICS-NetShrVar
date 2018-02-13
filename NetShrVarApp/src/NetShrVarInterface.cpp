@@ -121,7 +121,7 @@ class ScopedCNVData
 /// details about a network shared variable we have connected to an asyn parameter
 struct NvItem
 {
-	enum { Read=0x1, Write=0x2, BufferedRead=0x4, BufferedWrite=0x8 } NvAccessMode;   ///< possible access modes to network shared variable
+	enum { Read=0x1, Write=0x2, BufferedRead=0x4, BufferedWrite=0x8, SingleRead=0x10 } NvAccessMode;   ///< possible access modes to network shared variable
 	std::string nv_name;   ///< full path to network shared variable 
 	std::string type;   ///< type as specified in the XML file e.g. float64array
 	unsigned access; ///< combination of #NvAccessMode
@@ -131,10 +131,11 @@ struct NvItem
 	CNVSubscriber subscriber;
 	CNVBufferedSubscriber b_subscriber;
 	CNVWriter writer;
+	CNVReader reader;
 	CNVBufferedWriter b_writer;
 	epicsTimeStamp epicsTS; ///< timestamp of shared variable update
 	NvItem(const char* nv_name_, const char* type_, unsigned access_, int field_) : nv_name(nv_name_), type(type_), access(access_),
-		field(field_), id(-1), subscriber(0), b_subscriber(0), writer(0), b_writer(0)
+		field(field_), id(-1), subscriber(0), b_subscriber(0), writer(0), b_writer(0), reader(0)
 	{ 
 	    memset(&epicsTS, 0, sizeof(epicsTS));
 	    std::replace(nv_name.begin(), nv_name.end(), '/', '\\'); // we accept / as well as \ in the XML file for path to variable
@@ -161,6 +162,7 @@ struct NvItem
 	    report(fp, "buffered subscriber", b_subscriber, true);
 	    report(fp, "writer", writer, false);
 	    report(fp, "buffered writer", b_writer, true);
+	    report(fp, "reader", reader, false);
 	}
 	void report(FILE* fp, const char* conn_type, void* handle, bool buffered)
 	{
@@ -274,6 +276,11 @@ void NetShrVarInterface::connectVars()
 		{
 	        error = CNVCreateBufferedSubscriber(item->nv_name.c_str(), StatusCallback, cb_data, clientBufferMaxItems, waitTime, 0, &(item->b_subscriber));
 	        ERROR_CHECK("CNVCreateBufferedSubscriber", error);
+		}
+		else if (item->access & NvItem::SingleRead)
+		{
+	        error = CNVCreateReader(item->nv_name.c_str(), StatusCallback, cb_data, waitTime, 0, &(item->reader));
+	        ERROR_CHECK("CNVCreateReader", error);
 		}
 		// create either writer or buffered writer
 		if (item->access & NvItem::Write)
@@ -441,7 +448,18 @@ void NetShrVarInterface::updateParamArrayValue(int param_index, T* val, size_t n
 template <typename T> 
 void NetShrVarInterface::readArrayValue(const char* paramName, T* value, size_t nElements, size_t* nIn)
 {
-	std::vector<char>& array_data =  m_params[paramName]->array_data;
+	NvItem* item = m_params[paramName];
+	if (item->access & NvItem::SingleRead)
+	{
+        ScopedCNVData cvalue;
+		int status = CNVRead(item->reader, 10, &cvalue);
+		ERROR_CHECK("CNVRead", status);
+        if (status > 0)
+        {
+            updateParamCNV(item->id, cvalue, false);  ///< @todo or true?	and set timestamp below?	
+		}			
+	}
+	std::vector<char>& array_data =  item->array_data;
 	size_t n = array_data.size() / sizeof(T);
 	if (n > nElements)
 	{
@@ -452,6 +470,23 @@ void NetShrVarInterface::readArrayValue(const char* paramName, T* value, size_t 
 	m_driver->setTimeStamp(&(m_params[paramName]->epicsTS));
 }
 
+/// read a value and update corresponding asyn parameter
+void NetShrVarInterface::readValue(const char* param)
+{
+	NvItem* item = m_params[param];
+	if (item->access & NvItem::SingleRead)
+	{
+        ScopedCNVData cvalue;
+		int status = CNVRead(item->reader, 10, &cvalue);
+		ERROR_CHECK("CNVRead", status);
+        if (status > 0)
+        {
+            updateParamCNV(item->id, cvalue, true);
+		}			
+	}
+//	m_driver->setTimeStamp(&(m_params[paramName]->epicsTS)); // don't think this is needed
+}
+
 template<CNVDataType cnvType>
 void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, bool do_asyn_param_callbacks)
 {
@@ -460,9 +495,9 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
     int status = CNVGetDataUTCTimestamp(data, &timestamp);
 	ERROR_CHECK("CNVGetDataUTCTimestamp", status);
 	if (!convertTimeStamp(timestamp, &epicsTS))
-        {
+    {
             epicsTimeGetCurrent(&epicsTS);
-        }
+    }
 	if (nDims == 0)
 	{
 	    typename CNV2C<cnvType>::ctype val;
@@ -867,6 +902,10 @@ void NetShrVarInterface::getParams()
 			else if (!strcmp(str, "BR"))
 			{
 				access_mode |= NvItem::BufferedRead;
+			}
+			else if (!strcmp(str, "SR"))
+			{
+				access_mode |= NvItem::SingleRead;
 			}
 			else if (!strcmp(str, "W"))
 			{
