@@ -105,6 +105,8 @@ class ScopedCNVData
 	operator CNVData() { return m_value; }
 	ScopedCNVData& operator=(const ScopedCNVData& d) { m_value = d.m_value; return *this; }
 	ScopedCNVData& operator=(const CNVData& d) { m_value = d; return *this; }
+	bool operator==(CNVData d) const { return m_value == d; }
+	bool operator!=(CNVData d) const { return m_value != d; }
 	void dispose()
 	{
         int status = 0;
@@ -248,17 +250,21 @@ void NetShrVarInterface::connectVars()
 #ifdef _WIN32
 		// create if not exists??
 		int exists = 0;
-		size_t proc_pos = item->nv_name.find('\\', 2); // 2 for after \\ in \\localhost
+		size_t proc_pos = item->nv_name.find('\\', 2); // 2 for after \\ in \\localhost\proc\var
 		size_t var_pos = item->nv_name.rfind('\\');
 		if (proc_pos != std::string::npos && var_pos != std::string::npos)
 		{
-			std::string proc_name = item->nv_name.substr(proc_pos + 1, var_pos - proc_pos);
+		    std::string host_name = item->nv_name.substr(2, proc_pos - 2);
+			std::string proc_name = item->nv_name.substr(proc_pos + 1, var_pos - proc_pos - 1);
 			std::string var_name = item->nv_name.substr(var_pos + 1);
-		    error = CNVVariableExists(proc_name.c_str(), var_name.c_str(), &exists);
-	        ERROR_CHECK("CNVVariableExists", error);
-			if (exists == 0)
+			if (host_name == "localhost") 
 			{
-				std::cerr << "connectVars: process \"" << proc_name << "\" variable \"" << var_name << "\" does not exist on localhost" << std::endl;
+		        error = CNVVariableExists(proc_name.c_str(), var_name.c_str(), &exists);
+	            ERROR_CHECK("CNVVariableExists", error);
+			    if (exists == 0)
+			    {
+				    std::cerr << "connectVars: process \"" << proc_name << "\" variable \"" << var_name << "\" does not exist on localhost" << std::endl;
+			    }
 			}
 		}
 		else
@@ -452,7 +458,9 @@ void NetShrVarInterface::readArrayValue(const char* paramName, T* value, size_t 
 	if (item->access & NvItem::SingleRead)
 	{
         ScopedCNVData cvalue;
+		m_driver->unlock(); // to allow DataCallback to work while we try and read
 		int status = CNVRead(item->reader, 10, &cvalue);
+		m_driver->lock();
 		ERROR_CHECK("CNVRead", status);
         if (status > 0)
         {
@@ -477,9 +485,11 @@ void NetShrVarInterface::readValue(const char* param)
 	if (item->access & NvItem::SingleRead)
 	{
         ScopedCNVData cvalue;
+		m_driver->unlock(); // to allow DataCallback to work while we try and read
 		int status = CNVRead(item->reader, 10, &cvalue);
+		m_driver->lock();
 		ERROR_CHECK("CNVRead", status);
-        if (status > 0)
+        if (cvalue != 0)
         {
             updateParamCNV(item->id, cvalue, true);
 		}			
