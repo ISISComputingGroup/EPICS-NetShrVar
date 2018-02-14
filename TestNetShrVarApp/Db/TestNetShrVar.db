@@ -68,9 +68,9 @@ record(longout, "$(P)ind1")
 }
 
 # Read Network shared variable "//localhost/example/some_indicator2" 
-record(longin, "$(P)ind1_RBV")
+record(longin, "$(P)ind2_RBV")
 {
-    field(DESC, "NSV '//localhost/example/some_indicator2'")
+    field(DESC, "NSV //localhost/example/some_indicator2")
     field(DTYP, "asynInt32")
     field(INP,  "@asyn(nsv,0,0)ind2")
     field(SCAN, "5 second")
@@ -78,7 +78,7 @@ record(longin, "$(P)ind1_RBV")
 }
 
 # Write Network shared variable "//localhost/example/some_indicator2" 
-record(longout, "$(P)ind1")
+record(longout, "$(P)ind2")
 {
     field(DESC, "NSV '//localhost/example/some_indicator2'")
     field(DTYP, "asynInt32")
