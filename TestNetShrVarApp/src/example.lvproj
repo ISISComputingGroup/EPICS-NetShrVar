@@ -6,6 +6,7 @@
 	<Property Name="varPersistentID:{3A869BFF-8955-4E84-A227-B2E6D897C521}" Type="Ref">/My Computer/example.lvlib/arrayU16</Property>
 	<Property Name="varPersistentID:{4089568F-CE4D-4CFE-B5B9-DDD4C34C46D1}" Type="Ref">/My Computer/example.lvlib/some_control</Property>
 	<Property Name="varPersistentID:{650D14BC-6AC4-4B8E-9E01-6347E86E3C0B}" Type="Ref">/My Computer/example.lvlib/some_bool</Property>
+	<Property Name="varPersistentID:{B9FD9E71-0675-468B-AE0D-C310F95C3B15}" Type="Ref">/My Computer/example.lvlib/some_indicator2</Property>
 	<Property Name="varPersistentID:{D85B330D-A334-4CE0-A900-683E2B16A436}" Type="Ref">/My Computer/example.lvlib/some_string</Property>
 	<Property Name="varPersistentID:{EB45570A-E8E9-47EF-BAF0-2F3441653D29}" Type="Ref">/My Computer/example.lvlib/arrayDble</Property>
 	<Item Name="My Computer" Type="My Computer">
