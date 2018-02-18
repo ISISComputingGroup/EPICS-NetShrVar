@@ -975,11 +975,15 @@ void NetShrVarInterface::setValueCNV(const std::string& name, CNVData value)
 	}
 	if (item->access & NvItem::Write)
 	{
+		m_driver->unlock(); // to allow DataCallback to work while we try and write
 	    error = CNVWrite(item->writer, value, m_writer_wait_ms);
+		m_driver->lock();
 	}
 	else if (item->access & NvItem::BufferedWrite)
 	{
+		m_driver->unlock(); // to allow DataCallback to work while we try and write
 	    error = CNVPutDataInBuffer(item->b_writer, value, m_b_writer_wait_ms);
+		m_driver->lock();
 	}
 	else
 	{
