@@ -4,14 +4,10 @@
 #EPICS_BASE=/home/faa59/epics_test/epics-base
 #ASYN=/home/faa59/epics_test/asyn
 
-## top level master release and local private options 
-include $(TOP)/../../../configure/MASTER_RELEASE
--include $(TOP)/../../../configure/MASTER_RELEASE.$(EPICS_HOST_ARCH)
--include $(TOP)/../../../configure/MASTER_RELEASE.private
--include $(TOP)/../../../configure/MASTER_RELEASE.private.$(EPICS_HOST_ARCH)
-
 ## optional extra local definitions here
 -include $(TOP)/configure/RELEASE.private
 
 include $(TOP)/../../../ISIS_CONFIG
 -include $(TOP)/../../../ISIS_CONFIG.$(EPICS_HOST_ARCH)
+
+ASYN=$(SUPPORT)/asyn/master
