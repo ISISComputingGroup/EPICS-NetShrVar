@@ -2,12 +2,13 @@
 ## change the following lines and remove the includes below
 
 #EPICS_BASE=/home/faa59/epics_test/epics-base
-#ASYN=/home/faa59/epics_test/asyn
 
 ## optional extra local definitions here
+
+ASYN=$(SUPPORT)/asyn/master
+ONCRPC=$(SUPPORT)/oncrpc/master
+
 -include $(TOP)/configure/RELEASE.private
 
 include $(TOP)/../../../ISIS_CONFIG
 -include $(TOP)/../../../ISIS_CONFIG.$(EPICS_HOST_ARCH)
-
-ASYN=$(SUPPORT)/asyn/master
