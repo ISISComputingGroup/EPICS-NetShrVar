@@ -343,9 +343,20 @@ void NetShrVarInterface::dataTransferredCallback (void * handle, int error, Call
 /// called when new data is available on a subscriber connection
 static void CVICALLBACK DataCallback (void * handle, CNVData data, void * callbackData)
 {
-	CallbackData* cb_data = (CallbackData*)callbackData;
-	cb_data->intf->dataCallback(handle, data, cb_data);
-	CNVDisposeData (data);
+	try
+	{
+	    CallbackData* cb_data = (CallbackData*)callbackData;
+	    cb_data->intf->dataCallback(handle, data, cb_data);
+	    CNVDisposeData (data);
+	}
+	catch(const std::exception& ex)
+	{
+		std::cerr << "DataCallback: ERROR : " << ex.what() << std::endl; 
+	}
+	catch(...)
+	{
+		std::cerr << "DataCallback: ERROR" << std::endl; 
+	}	
 }
 
 /// called by DataCallback() when new data is available on a subscriber connection
