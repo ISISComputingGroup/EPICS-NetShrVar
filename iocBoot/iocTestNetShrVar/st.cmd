@@ -14,7 +14,7 @@ TestNetShrVar_registerRecordDeviceDriver pdbbase
 ## portName ("nsv" below) refers to the asyn driver port name - it is the external name used in epics DB files to refer to the driver instance
 ## configSection ("sec1" below) refers to the section of configFile ("netvarconfig.xml" below) where settings are read from
 ## configFile is the path to the main configuration file (netvarconfig.xml)
-## pollPeriod (100) is the interval (ms) at which the driver will pull values from variables accessed via a BufferedReader connection 
+## pollPeriod (100) is the interval (ms) at which the driver will pull values from the client side buffer for variables accessed via a BufferedReader connection 
 ## options (0 below) is currently unused but would map to values in #NetShrVarOptions    
 NetShrVarConfigure("nsv", "sec1", "$(TOP)/TestNetShrVarApp/src/netvarconfig.xml", 100, 0)
 

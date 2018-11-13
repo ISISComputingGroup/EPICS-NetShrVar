@@ -38,6 +38,7 @@ Features of NetShrVar are:
 <LI> Handles both simple types and arrays of simple types. For array data types, the EPICS PV bound to an NSV must be of the same data type byte size (16 or 32bit etc), 
 but can differ in sign. Simple single value types are automatically cast (double to float, short to int, int to float)
 <LI> Read (but not write to) "struct" type network variables. A separate PV of one of the above types is bound to each individual struct field of interest.
+<LI> The timestamp of the EPICS record will be set to that of the underlying network shared variable if the DB record TSE field is set to -2
 </UL>
 
 </P><P>
@@ -183,11 +184,11 @@ To see a rapidly changing variable try:
 Rather than using a command line, you can also use various EPICS GUI client tools to check the process variable link. 
 One good one for LabVIEW based environments is CaLab  http://www-csr.bessy.de/control/SoftDist/CA_Lab/ 
 	
-<H2>TODO</H2>
-<UL>	
-<LI>propagate update timestamp from shared variable to EPICS - currently the time epics read the variable rather than when it changed is used</LI>
-</UL>
+<H2>Notes</H2>
+On windows the library links against cvirte.dll but will activate ninetv.dll at run time, if you get an <I>error loading library</I> message 
+it likely has not found (or found an incompatible) ninetv.dll
 
+If you are updating a shared variable from LabVIEW, by default it will flush shared variable writes every 10ms. If you wish to have the data picked up earlier you will need to use <B>flush shared variable data.vi</B> after your write.  
 
 <H2>Support</H2>
 
