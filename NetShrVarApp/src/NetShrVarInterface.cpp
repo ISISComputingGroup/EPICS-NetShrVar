@@ -212,11 +212,11 @@ static void CVICALLBACK StatusCallback (void * handle, CNVConnectionStatus statu
 static void CVICALLBACK DataTransferredCallback(void * handle, int error, void * callbackData);
 
 /// used to perform an initial read of a subscribed variable
-void NetShrVarInterface::readVarInit(NvItem* item, CallbackData* cb_data)
+void NetShrVarInterface::readVarInit(NvItem* item)
 {
     int waitTime = 3000; // in milliseconds, or CNVWaitForever 
     CNVReader reader;
-	int error = CNVCreateReader(item->nv_name.c_str(), StatusCallback, cb_data, waitTime, 0, &reader);
+	int error = CNVCreateReader(item->nv_name.c_str(), NULL, NULL, waitTime, 0, &reader);
 	ERROR_CHECK("CNVCreateReader", error);
 	ScopedCNVData cvalue;
 	int status = CNVRead(reader, 10, &cvalue);
@@ -294,13 +294,13 @@ void NetShrVarInterface::connectVars()
 		{
 	        error = CNVCreateSubscriber(item->nv_name.c_str(), DataCallback, StatusCallback, cb_data, waitTime, 0, &(item->subscriber));
 	        ERROR_CHECK("CNVCreateSubscriber", error);
-			readVarInit(item, cb_data);
+			readVarInit(item);
 		}
 		else if (item->access & NvItem::BufferedRead)
 		{
 	        error = CNVCreateBufferedSubscriber(item->nv_name.c_str(), StatusCallback, cb_data, clientBufferMaxItems, waitTime, 0, &(item->b_subscriber));
 	        ERROR_CHECK("CNVCreateBufferedSubscriber", error);
-			readVarInit(item, cb_data);
+			readVarInit(item);
 		}
 		else if (item->access & NvItem::SingleRead)
 		{
