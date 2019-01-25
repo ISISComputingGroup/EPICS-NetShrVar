@@ -216,16 +216,22 @@ void NetShrVarInterface::readVarInit(NvItem* item)
 {
     int waitTime = 3000; // in milliseconds, or CNVWaitForever 
     CNVReader reader;
-	int error = CNVCreateReader(item->nv_name.c_str(), NULL, NULL, waitTime, 0, &reader);
-	ERROR_CHECK("CNVCreateReader", error);
-	ScopedCNVData cvalue;
-	int status = CNVRead(reader, 10, &cvalue);
-	ERROR_CHECK("CNVRead", status);
-	if (cvalue != 0)
+	try {
+	    int error = CNVCreateReader(item->nv_name.c_str(), NULL, NULL, waitTime, 0, &reader);
+	    ERROR_CHECK("CNVCreateReader", error);
+	    ScopedCNVData cvalue;
+	    int status = CNVRead(reader, 10, &cvalue);
+	    ERROR_CHECK("CNVRead", status);
+	    if (cvalue != 0)
+	    {
+		    updateParamCNV(item->id, cvalue, true);
+	    }
+	    CNVDispose(reader);
+	}
+	catch(const std::exception& ex)
 	{
-		updateParamCNV(item->id, cvalue, true);
-	}			
-	CNVDispose(reader);
+		std::cerr << "Unable to read initial value from \"" << item->nv_name << "\": " << ex.what() << std::endl;
+	}
 }
 
 void NetShrVarInterface::connectVars()
@@ -531,6 +537,7 @@ template<CNVDataType cnvType>
 void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, bool do_asyn_param_callbacks)
 {
     unsigned __int64 timestamp;
+	static const int maxDims = 10;
 	epicsTimeStamp epicsTS;
     int status = CNVGetDataUTCTimestamp(data, &timestamp);
 	ERROR_CHECK("CNVGetDataUTCTimestamp", status);
@@ -546,10 +553,10 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 	    updateParamValue(param_index, val, &epicsTS, do_asyn_param_callbacks);
         CNV2C<cnvType>::free(val);
 	}
-	else
+	else if (nDims <= maxDims)
 	{
-	    typename CNV2C<cnvType>::ctype* val;
-	    size_t dimensions[10];
+	    typename CNV2C<cnvType>::ctype* val = NULL;
+	    size_t dimensions[maxDims];
 	    int status = CNVGetArrayDataDimensions(data, nDims, dimensions);
 	    ERROR_CHECK("CNVGetArrayDataDimensions", status);
 		size_t nElements = 1;
@@ -557,11 +564,17 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 		{
 		    nElements *= dimensions[i];
 		}
-		val = new typename CNV2C<cnvType>::ctype[nElements];
-		status = CNVGetArrayDataValue(data, type, val, nElements);
-	    ERROR_CHECK("CNVGetArrayDataValue", status);
-	    updateParamArrayValue(param_index, val, nElements, &epicsTS);
-		delete[] val;
+		if (nElements > 0)
+		{
+		    val = new typename CNV2C<cnvType>::ctype[nElements];
+			if (val != NULL)
+			{
+		        status = CNVGetArrayDataValue(data, type, val, nElements);
+	            ERROR_CHECK("CNVGetArrayDataValue", status);
+	            updateParamArrayValue(param_index, val, nElements, &epicsTS);
+		        delete[] val;
+			}
+		}
 	}
 }
 
@@ -595,7 +608,7 @@ bool NetShrVarInterface::convertTimeStamp(unsigned __int64 timestamp, epicsTimeS
 
 void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_asyn_param_callbacks)
 {
-	unsigned int	nDims;
+	unsigned int	nDims = 0;
 	unsigned int	serverError;
 	CNVDataType		type;
     CNVDataQuality quality;
