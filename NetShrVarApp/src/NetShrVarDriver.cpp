@@ -402,8 +402,19 @@ void NetShrVarDriver::NetShrVarTask(void* arg)
 	{
 		while(!driver->shuttingDown())
 		{
-			driver->updateValues();
-			epicsThreadSleep(static_cast<double>(poll_ms) / 1000.0);
+			try
+			{
+				driver->updateValues();
+			}
+			catch (const std::exception& ex)
+			{
+				std::cerr << "NetShrVarTask: " << ex.what() << std::endl;
+			}
+			catch (...)
+			{
+				std::cerr << "NetShrVarTask: unknown exception" << std::endl;
+			}
+		    epicsThreadSleep(static_cast<double>(poll_ms) / 1000.0);
 		}
 	}
 }
