@@ -59,7 +59,6 @@ class NetShrVarException : public std::runtime_error
 public:
 	explicit NetShrVarException(const std::string& message) : std::runtime_error(message) { }
 	explicit NetShrVarException(const std::string& function, int code) : std::runtime_error(ni_message(function, code)) { }
-private:
 	static std::string ni_message(const std::string& function, int code)
 	{
 	    return function + ": " + CNVGetErrorDescription(code);
@@ -70,6 +69,13 @@ private:
     if (__code < 0) \
 	{ \
 	    throw NetShrVarException(__func, __code); \
+	}
+
+#define ERROR_PRINT_CONTINUE(__func, __code) \
+    if (__code < 0) \
+	{ \
+	    std::cerr << NetShrVarException::ni_message(__func, __code); \
+		continue; \
 	}
 
 /// connection status of a network shared variable
@@ -246,7 +252,7 @@ void NetShrVarInterface::connectVars()
 	ERROR_CHECK("CNVVariableEngineIsRunning", error);
     if (running == 0)
     {
-		std::cerr << "connectVars: Variable engine is not running" << std::endl;
+		std::cerr << "connectVars: NI Variable engine is not running" << std::endl;
     }
     char** processes = NULL;
 	int numberOfProcesses = 0;
@@ -299,30 +305,30 @@ void NetShrVarInterface::connectVars()
 		if (item->access & NvItem::Read)
 		{
 	        error = CNVCreateSubscriber(item->nv_name.c_str(), DataCallback, StatusCallback, cb_data, waitTime, 0, &(item->subscriber));
-	        ERROR_CHECK("CNVCreateSubscriber", error);
+	        ERROR_PRINT_CONTINUE("CNVCreateSubscriber", error);
 			readVarInit(item);
 		}
 		else if (item->access & NvItem::BufferedRead)
 		{
 	        error = CNVCreateBufferedSubscriber(item->nv_name.c_str(), StatusCallback, cb_data, clientBufferMaxItems, waitTime, 0, &(item->b_subscriber));
-	        ERROR_CHECK("CNVCreateBufferedSubscriber", error);
+	        ERROR_PRINT_CONTINUE("CNVCreateBufferedSubscriber", error);
 			readVarInit(item);
 		}
 		else if (item->access & NvItem::SingleRead)
 		{
 	        error = CNVCreateReader(item->nv_name.c_str(), StatusCallback, cb_data, waitTime, 0, &(item->reader));
-	        ERROR_CHECK("CNVCreateReader", error);
+	        ERROR_PRINT_CONTINUE("CNVCreateReader", error);
 		}
 		// create either writer or buffered writer
 		if (item->access & NvItem::Write)
 		{
 	        error = CNVCreateWriter(item->nv_name.c_str(), StatusCallback, cb_data, waitTime, 0, &(item->writer));
-	        ERROR_CHECK("CNVCreateWriter", error);
+	        ERROR_PRINT_CONTINUE("CNVCreateWriter", error);
 		}
 		else if (item->access & NvItem::BufferedWrite)
 		{
 	        error = CNVCreateBufferedWriter(item->nv_name.c_str(), DataTransferredCallback, StatusCallback, cb_data, clientBufferMaxItems, waitTime, 0, &(item->b_writer));
-	        ERROR_CHECK("CNVCreateBufferedWriter", error);
+	        ERROR_PRINT_CONTINUE("CNVCreateBufferedWriter", error);
 		}
 	}
 }
@@ -494,14 +500,21 @@ void NetShrVarInterface::readArrayValue(const char* paramName, T* value, size_t 
 	if (item->access & NvItem::SingleRead)
 	{
         ScopedCNVData cvalue;
-		m_driver->unlock(); // to allow DataCallback to work while we try and read
-		int status = CNVRead(item->reader, 10, &cvalue);
-		m_driver->lock();
-		ERROR_CHECK("CNVRead", status);
-        if (status > 0)
-        {
-            updateParamCNV(item->id, cvalue, false);  ///< @todo or true?	and set timestamp below?	
-		}			
+		if (item->reader != NULL)
+		{
+			m_driver->unlock(); // to allow DataCallback to work while we try and read
+			int status = CNVRead(item->reader, 10, &cvalue);
+			m_driver->lock();
+			ERROR_CHECK("CNVRead", status);
+			if (status > 0)
+			{
+				updateParamCNV(item->id, cvalue, false);  ///< @todo or true?	and set timestamp below?	
+			}
+		}
+		else
+		{
+			std::cerr << "NetShrVarInterface::readArrayValue: Param \"" << paramName << "\" (" << item->nv_name << ") is not valid" << std::endl;
+		}
 	}
 	std::vector<char>& array_data =  item->array_data;
 	size_t n = array_data.size() / sizeof(T);
@@ -521,14 +534,21 @@ void NetShrVarInterface::readValue(const char* param)
 	if (item->access & NvItem::SingleRead)
 	{
         ScopedCNVData cvalue;
-		m_driver->unlock(); // to allow DataCallback to work while we try and read
-		int status = CNVRead(item->reader, 10, &cvalue);
-		m_driver->lock();
-		ERROR_CHECK("CNVRead", status);
-        if (cvalue != 0)
-        {
-            updateParamCNV(item->id, cvalue, true);
-		}			
+		if (item->reader != NULL)
+		{
+			m_driver->unlock(); // to allow DataCallback to work while we try and read
+			int status = CNVRead(item->reader, 10, &cvalue);
+			m_driver->lock();
+			ERROR_CHECK("CNVRead", status);
+			if (cvalue != 0)
+			{
+				updateParamCNV(item->id, cvalue, true);
+			}
+		}
+		else
+		{
+			std::cerr << "NetShrVarInterface::readValue: Param \"" << param << "\" (" << item->nv_name << ") is not valid" << std::endl;
+		}
 	}
 //	m_driver->setTimeStamp(&(m_params[paramName]->epicsTS)); // don't think this is needed
 }
@@ -1051,15 +1071,22 @@ void NetShrVarInterface::updateValues()
 		else if (item->access & NvItem::BufferedRead)
 		{
 			ScopedCNVData value;
-			status = CNVGetDataFromBuffer(item->b_subscriber, &value, &dataStatus);
-			ERROR_CHECK("CNVGetDataFromBuffer", status); // may throw exception
-			if (dataStatus == CNVNewData || dataStatus == CNVDataWasLost)
+			if (item->b_subscriber != NULL)
 			{
-			    updateParamCNV(item->id, value, true);
+				status = CNVGetDataFromBuffer(item->b_subscriber, &value, &dataStatus);
+				ERROR_CHECK("CNVGetDataFromBuffer", status); // may throw exception
+				if (dataStatus == CNVNewData || dataStatus == CNVDataWasLost)
+				{
+					updateParamCNV(item->id, value, true);
+				}
+				if (dataStatus == CNVDataWasLost)
+				{
+					std::cerr << "NetShrVarInterface::updateValues: BufferedReader: data was lost for param \"" << it->first << "\" (" << item->nv_name << ") - is poll frequency too low?" << std::endl;
+				}
 			}
-			if (dataStatus == CNVDataWasLost)
+			else
 			{
-			    std::cerr << "updateValues: BufferedReader: data was lost for param \"" << it->first << "\" (" << item->nv_name << ") - is poll frequency too low?" << std::endl;
+				std::cerr << "NetShrVarInterface::updateValues: BufferedReader: param \"" << it->first << "\" (" << item->nv_name << ") is not valid" << std::endl;
 			}
 		}
 		else
