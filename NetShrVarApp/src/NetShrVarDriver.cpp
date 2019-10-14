@@ -26,6 +26,7 @@
 #include <epicsEvent.h>
 #include <errlog.h>
 #include <iocsh.h>
+#include <alarm.h>
 
 #ifdef _WIN32
 #include <windows.h>

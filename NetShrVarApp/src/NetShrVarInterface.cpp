@@ -41,6 +41,7 @@
 #include <errlog.h>
 #include <cantProceed.h>
 #include <epicsTime.h>
+#include <alarm.h>
 
 #include "pugixml.hpp"
 
@@ -237,6 +238,7 @@ void NetShrVarInterface::readVarInit(NvItem* item)
 	catch(const std::exception& ex)
 	{
 		std::cerr << "Unable to read initial value from \"" << item->nv_name << "\": " << ex.what() << std::endl;
+		setParamStatus(item->id, asynError);
 	}
 }
 
@@ -364,6 +366,7 @@ void NetShrVarInterface::dataTransferredCallback (void * handle, int error, Call
 	if (error < 0)
 	{
 		std::cerr << "dataTransferredCallback: \"" << cb_data->nv_name << "\": " << CNVGetErrorDescription(error) << std::endl;
+		setParamStatus(cb_data->param_index, asynError);
 	}
 //	else
 //	{
@@ -506,7 +509,7 @@ void NetShrVarInterface::readArrayValue(const char* paramName, T* value, size_t 
 			int status = CNVRead(item->reader, 10, &cvalue);
 			m_driver->lock();
 			ERROR_CHECK("CNVRead", status);
-			if (status > 0)
+			if (status > 0) // 0 means no new value, 1 means a new value since last read
 			{
 				updateParamCNV(item->id, cvalue, false);  ///< @todo or true?	and set timestamp below?	
 			}
@@ -670,7 +673,16 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_
     if (good == 0)
     {
         std::cerr << "updateParamCNV: data for param " << paramName << " is not good quality: " << dataQuality(quality) << std::endl;
+	    setParamStatus(param_index, asynError);
     }
+	else if ( quality & (CNVDataQualityInAlarm | CNVDataQualityLowLimited | CNVDataQualityHighLimited) )
+	{
+	    setParamStatus(param_index, asynSuccess, epicsAlarmHwLimit, epicsSevMinor);
+	}
+	else
+	{
+	    setParamStatus(param_index, asynSuccess);
+	}
     switch(type)
 	{
 		case CNVEmpty:
@@ -753,10 +765,15 @@ void NetShrVarInterface::statusCallback (void * handle, CNVConnectionStatus stat
 	if (error < 0)
 	{
 		std::cerr << "StatusCallback: " << cb_data->nv_name << ": " << CNVGetErrorDescription(error) << std::endl;
+		setParamStatus(cb_data->param_index, asynError);
 	}
 	else
 	{
 		std::cerr << "StatusCallback: " << cb_data->nv_name << " is " << connectionStatus(status) << std::endl;
+	    if (status != CNVConnected)
+	    {
+		    setParamStatus(cb_data->param_index, asynDisconnected);
+		}
 	}
 }
 
@@ -1055,6 +1072,15 @@ void NetShrVarInterface::setValueCNV(const std::string& name, CNVData value)
 	ERROR_CHECK("setValue", error);
 }
 
+void NetShrVarInterface::setParamStatus(int param_id, asynStatus status, epicsAlarmCondition alarmStat, epicsAlarmSeverity alarmSevr)
+{
+	m_driver->lock();
+	m_driver->setParamStatus(param_id, status);
+	m_driver->setParamAlarmStatus(param_id, alarmStat);
+	m_driver->setParamAlarmSeverity(param_id, alarmSevr);
+	m_driver->unlock();	
+}
+
 /// This is called from a polling loop in the driver to 
 /// update values from buffered subscribers
 void NetShrVarInterface::updateValues()
@@ -1074,14 +1100,19 @@ void NetShrVarInterface::updateValues()
 			if (item->b_subscriber != NULL)
 			{
 				status = CNVGetDataFromBuffer(item->b_subscriber, &value, &dataStatus);
-				ERROR_CHECK("CNVGetDataFromBuffer", status); // may throw exception
-				if (dataStatus == CNVNewData || dataStatus == CNVDataWasLost)
+				if (status < 0)
 				{
-					updateParamCNV(item->id, value, true);
+	                std::cerr << NetShrVarException::ni_message("CNVGetDataFromBuffer", status);
+					setParamStatus(item->id, asynError);
 				}
 				if (dataStatus == CNVDataWasLost)
 				{
 					std::cerr << "NetShrVarInterface::updateValues: BufferedReader: data was lost for param \"" << it->first << "\" (" << item->nv_name << ") - is poll frequency too low?" << std::endl;
+					// set an alarm status?
+				}
+				if (dataStatus == CNVNewData || dataStatus == CNVDataWasLost)  // returns CNVStaleData if value unchanged frm last read
+				{
+					updateParamCNV(item->id, value, true);
 				}
 			}
 			else

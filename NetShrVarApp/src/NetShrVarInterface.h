@@ -26,6 +26,7 @@
 #include <epicsThread.h>
 #include <epicsExit.h>
 #include <macLib.h>
+#include <asynDriver.h>
 
 #include <cvirte.h>		
 #include <userint.h>
@@ -85,6 +86,7 @@ private:
 	template<CNVDataType cnvType> void updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, bool do_asyn_param_callbacks);
 	template<typename T,typename U> void updateParamArrayValueImpl(int param_index, T* val, size_t nElements);
 	void readVarInit(NvItem* item);
+    void setParamStatus(int param_id, asynStatus status, epicsAlarmCondition alarmStat = epicsAlarmNone, epicsAlarmSeverity alarmSevr = epicsSevNone);
 };
 
 #endif /* NETSHRVAR_INTERFACE_H */
