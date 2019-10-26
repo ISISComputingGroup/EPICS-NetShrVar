@@ -21,6 +21,30 @@ record(ai, "$(P)cont1_RBV")
     field(SCAN, "I/O Intr")
 }
 
+# This reads the HiHi alarm status of the network variable, which is
+# available as a parameter but should alerady be propogated to the EPICS
+# alarm status. This needs alarming ebabled via NI distributed system manager
+record(bi, "$(P)cont1_HiHi_Set")
+{
+    field("ZNAM", "NO_ALARM")
+    field("ONAM", "ALARM")
+    field(DESC, "NSV '//localhost/example/some_control'")
+    field(DTYP, "asynInt32")
+    field(INP,  "@asyn(nsv,0,0)cont1_HiHi_Set")
+    field(SCAN, "I/O Intr")
+}
+
+# This reads the HiHi alarm level of the network variable, which is
+# available as an asyn parameter. It will not be present unless alarming 
+# is setup via NI distributed system manager
+record(ai, "$(P)cont1_HiHi_level")
+{
+    field(DESC, "NSV '//localhost/example/some_control'")
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn(nsv,0,0)cont1_HiHi_level")
+    field(SCAN, "I/O Intr")
+}
+
 # Write Network shared variable "//localhost/example/some_control" 
 record(ao, "$(P)cont1")
 {
