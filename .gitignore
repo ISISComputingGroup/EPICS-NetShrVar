@@ -14,3 +14,4 @@ relPaths.sh
 *.tags
 /doc/
 .project
+*.lvlps

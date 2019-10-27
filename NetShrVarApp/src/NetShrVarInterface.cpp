@@ -41,10 +41,13 @@
 #include <errlog.h>
 #include <cantProceed.h>
 #include <epicsTime.h>
+#include <alarm.h>
 
 #include "pugixml.hpp"
 
 #include "asynPortDriver.h"
+
+#include <epicsExport.h>
 
 #include "NetShrVarInterface.h"
 #include "cnvconvert.h"
@@ -135,6 +138,7 @@ struct NvItem
 	unsigned access; ///< combination of #NvAccessMode
 	int field; ///< if we refer to a struct, this is the index of the field (starting at 0), otherwise it is -1 
 	int id; ///< asyn parameter id, -1 if not assigned
+	bool connected_alarm;
 	std::vector<char> array_data; ///< only used for array parameters, contains cached copy of data as this is not stored in usual asyn parameter map
 	CNVSubscriber subscriber;
 	CNVBufferedSubscriber b_subscriber;
@@ -142,8 +146,8 @@ struct NvItem
 	CNVReader reader;
 	CNVBufferedWriter b_writer;
 	epicsTimeStamp epicsTS; ///< timestamp of shared variable update
-	NvItem(const char* nv_name_, const char* type_, unsigned access_, int field_) : nv_name(nv_name_), type(type_), access(access_),
-		field(field_), id(-1), subscriber(0), b_subscriber(0), writer(0), b_writer(0), reader(0)
+	NvItem(const std::string& nv_name_, const char* type_, unsigned access_, int field_) : nv_name(nv_name_), type(type_), access(access_),
+		field(field_), id(-1), subscriber(0), b_subscriber(0), writer(0), b_writer(0), reader(0), connected_alarm(false)
 	{ 
 	    memset(&epicsTS, 0, sizeof(epicsTS));
 	    std::replace(nv_name.begin(), nv_name.end(), '/', '\\'); // we accept / as well as \ in the XML file for path to variable
@@ -237,7 +241,121 @@ void NetShrVarInterface::readVarInit(NvItem* item)
 	catch(const std::exception& ex)
 	{
 		std::cerr << "Unable to read initial value from \"" << item->nv_name << "\": " << ex.what() << std::endl;
+		setParamStatus(item->id, asynError);
 	}
+}
+
+static const char* getBrowseType(CNVBrowseType browseType)
+{
+	switch(browseType)
+	{
+		case CNVBrowseTypeUndefined:
+		    return "The item's browse type is not defined.";
+			break;
+			
+		case CNVBrowseTypeMachine:
+			return "The item is a computer.";
+			break;
+			
+		case CNVBrowseTypeProcess:
+			return "This item is a process.";
+			break;
+			
+		case CNVBrowseTypeFolder:
+			return "The item is a folder.";
+			break;
+			
+		case CNVBrowseTypeItem:
+			return "The item is a variable.";
+			break;
+			
+		case CNVBrowseTypeItemRange:
+			return "The item is a range of variables. ";
+			break;
+			
+		case CNVBrowseTypeImplicitItem:
+			return "The item is an implict item.";
+			break;
+			
+		default:
+			return "unknown.";
+			break;
+	}
+}
+			
+// this looks to see if a path can be browsed
+bool NetShrVarInterface::pathExists(const std::string& path)
+{
+#ifdef _WIN32
+	CNVBrowser browser = NULL;
+	char* item = NULL;
+	int leaf, error;
+	CNVBrowseType browseType = CNVBrowseTypeUndefined;
+	error = CNVCreateBrowser(&browser);
+	ERROR_CHECK("CNVCreateBrowser", error);
+	error = CNVBrowse(browser, path.c_str()); // error < 0 = not found
+	if (error < 0)
+	{
+		CNVDisposeBrowser(browser);
+		return false;
+	}
+	if (false)
+	{
+	    error = CNVBrowseNextItem(browser, &item, &leaf, &browseType, NULL);
+		std::cerr << "error " << error << " leaf " << leaf << " type " << getBrowseType(browseType) << std::endl;
+		// if error > 0 then item != NULL and is the browsed next item
+		if (item != NULL)
+		{
+			std::cerr << item << std::endl;
+			CNVFreeMemory(item);
+		}
+	}
+	CNVDisposeBrowser(browser);
+	return true;
+#else
+	return true;
+#endif
+}
+
+// this only works for localhost variables
+bool NetShrVarInterface::varExists(const std::string& path)
+{	
+#ifdef _WIN32
+		int error, exists = 0;
+		size_t proc_pos = path.find('\\', 2); // 2 for after \\ in \\localhost\proc\var
+		size_t var_pos = path.rfind('\\');
+
+		if (proc_pos != std::string::npos && var_pos != std::string::npos)
+		{
+		    std::string host_name = path.substr(2, proc_pos - 2);
+			std::string proc_name = path.substr(proc_pos + 1, var_pos - proc_pos - 1);
+			std::string var_name = path.substr(var_pos + 1);
+			if (host_name == "localhost")
+			{
+		        error = CNVVariableExists(proc_name.c_str(), var_name.c_str(), &exists);
+	            ERROR_CHECK("CNVVariableExists", error);
+			    if (exists != 0)
+			    {
+					return true;
+			    }
+				else
+			    {
+					return false;
+			    }
+			}
+			else
+			{
+				return false;
+			}
+		}
+		else
+		{
+			std::cerr << "varExists: cannot parse \"" << path << "\"" << std::endl;
+			return false;
+		}
+#else
+	return false;
+#endif
 }
 
 void NetShrVarInterface::connectVars()
@@ -269,38 +387,45 @@ void NetShrVarInterface::connectVars()
 	std::cerr << std::endl;
 	CNVFreeMemory(processes);
 #endif
+
+    // look for alarm network variables
+	static const char* alarm_fields[] = { "Hi", "HiHi", "Lo", "LoLo" };
+	params_t new_params;
+	for(params_t::const_iterator it=m_params.begin(); it != m_params.end(); ++it)
+	{
+		NvItem* item = it->second;
+		std::string param_name = it->first;
+		if (pathExists(item->nv_name))
+		{
+			for(int i=0; i<sizeof(alarm_fields) / sizeof(const char*); ++i)
+			{
+				std::string prefix = item->nv_name + "\\Alarms\\" + alarm_fields[i] + "\\";
+				if (pathExists(prefix + "Enable"))
+				{
+					std::cerr << "Adding " << alarm_fields[i] << " alarm field for " << item->nv_name << " (asyn parameter: " << param_name << ")" << std::endl;
+					item->connected_alarm = true;
+					new_params[param_name + "_" + alarm_fields[i] + "_Enable"] = new NvItem(prefix + "Enable", "boolean", NvItem::Read|NvItem::Write, -1);
+					new_params[param_name + "_" + alarm_fields[i] + "_Set"] = new NvItem(prefix + "Set", "boolean", NvItem::Read, -1);
+					new_params[param_name + "_" + alarm_fields[i] + "_Ack"] = new NvItem(prefix + "Ack", "boolean", NvItem::Read, -1);
+					new_params[param_name + "_" + alarm_fields[i] + "_AckType"] = new NvItem(prefix + "AckType", "int32", NvItem::Read|NvItem::Write, -1);
+					new_params[param_name + "_" + alarm_fields[i] + "_level"] = new NvItem(prefix + "level", "float64", NvItem::Read|NvItem::Write, -1);
+					new_params[param_name + "_" + alarm_fields[i] + "_deadband"] = new NvItem(prefix + "deadband", "float64", NvItem::Read|NvItem::Write, -1);
+				}
+			}
+		}
+	}
+	m_params.insert(new_params.begin(), new_params.end());
 	
+	initAsynParamIds();
+
+	// now connect vars
 	for(params_t::const_iterator it=m_params.begin(); it != m_params.end(); ++it)
 	{
 		NvItem* item = it->second;
 	    cb_data = new CallbackData(this, item->nv_name, item->id);
 		
 		std::cerr << "connectVars: connecting to \"" << item->nv_name << "\"" << std::endl;
-#ifdef _WIN32
-		// create if not exists??
-		int exists = 0;
-		size_t proc_pos = item->nv_name.find('\\', 2); // 2 for after \\ in \\localhost\proc\var
-		size_t var_pos = item->nv_name.rfind('\\');
-		if (proc_pos != std::string::npos && var_pos != std::string::npos)
-		{
-		    std::string host_name = item->nv_name.substr(2, proc_pos - 2);
-			std::string proc_name = item->nv_name.substr(proc_pos + 1, var_pos - proc_pos - 1);
-			std::string var_name = item->nv_name.substr(var_pos + 1);
-			if (host_name == "localhost") 
-			{
-		        error = CNVVariableExists(proc_name.c_str(), var_name.c_str(), &exists);
-	            ERROR_CHECK("CNVVariableExists", error);
-			    if (exists == 0)
-			    {
-				    std::cerr << "connectVars: process \"" << proc_name << "\" variable \"" << var_name << "\" does not exist on localhost" << std::endl;
-			    }
-			}
-		}
-		else
-		{
-			std::cerr << "connectVars: cannot parse \"" << item->nv_name << "\"" << std::endl;
-		}
-#endif
+		
 		// create either reader or buffered reader
 		if (item->access & NvItem::Read)
 		{
@@ -364,6 +489,7 @@ void NetShrVarInterface::dataTransferredCallback (void * handle, int error, Call
 	if (error < 0)
 	{
 		std::cerr << "dataTransferredCallback: \"" << cb_data->nv_name << "\": " << CNVGetErrorDescription(error) << std::endl;
+		setParamStatus(cb_data->param_index, asynError);
 	}
 //	else
 //	{
@@ -408,12 +534,40 @@ void NetShrVarInterface::dataCallback (void * handle, CNVData data, CallbackData
 	}
 }
 
+void NetShrVarInterface::updateConnectedAlarmStatus(const std::string& paramName, int value, const std::string& alarmStr, epicsAlarmCondition stat, epicsAlarmSeverity sevr)
+{
+	asynStatus status;
+	int connected_param_index = -1;
+	const char *conectedParamName = NULL;
+	std::string suffix = "_" + alarmStr + "_Set";
+	if ( (paramName.size() > suffix.size()) && (paramName.substr(paramName.size() - suffix.size()) == suffix) )
+	{
+		std::string connectedParamName = paramName.substr(0, paramName.size() - suffix.size());
+	    if (m_driver->findParam(connectedParamName.c_str(), &connected_param_index) == asynSuccess)
+		{
+			// check if param is in error, if so don't update alarm sttaus
+			if ( (m_driver->getParamStatus(connected_param_index, &status) == asynSuccess) && (status == asynSuccess) )
+			{
+				std::cerr << "Alarm type " << alarmStr << (value != 0 ? " raised" : " cleared") << " for asyn parameter " << connectedParamName << std::endl;
+				if (value != 0)
+				{
+			        setParamStatus(connected_param_index, asynSuccess, stat, sevr);
+				}
+				else
+				{
+			        setParamStatus(connected_param_index, asynSuccess);
+				}
+			}
+		}
+	}
+}	
+
 template<typename T>
 void NetShrVarInterface::updateParamValue(int param_index, T val, epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks)
 {
 	const char *paramName = NULL;
-	m_driver->getParamName(param_index, &paramName);
 	m_driver->lock();
+	m_driver->getParamName(param_index, &paramName);
 	m_driver->setTimeStamp(epicsTS);
 	if (m_params[paramName]->type == "float64")
 	{
@@ -421,7 +575,12 @@ void NetShrVarInterface::updateParamValue(int param_index, T val, epicsTimeStamp
 	}
 	else if (m_params[paramName]->type == "int32" || m_params[paramName]->type == "boolean")
 	{
-	    m_driver->setIntegerParam(param_index, convertToScalar<int>(val));
+		int intVal = convertToScalar<int>(val);
+	    m_driver->setIntegerParam(param_index, intVal);
+	    updateConnectedAlarmStatus(paramName, intVal, "Hi", epicsAlarmHigh, epicsSevMinor);
+	    updateConnectedAlarmStatus(paramName, intVal, "HiHi", epicsAlarmHiHi, epicsSevMajor);
+	    updateConnectedAlarmStatus(paramName, intVal, "Lo", epicsAlarmLow, epicsSevMinor);
+	    updateConnectedAlarmStatus(paramName, intVal, "LoLo", epicsAlarmLoLo, epicsSevMajor);
 	}
 	else if (m_params[paramName]->type == "string")
 	{
@@ -506,7 +665,7 @@ void NetShrVarInterface::readArrayValue(const char* paramName, T* value, size_t 
 			int status = CNVRead(item->reader, 10, &cvalue);
 			m_driver->lock();
 			ERROR_CHECK("CNVRead", status);
-			if (status > 0)
+			if (status > 0) // 0 means no new value, 1 means a new value since last read
 			{
 				updateParamCNV(item->id, cvalue, false);  ///< @todo or true?	and set timestamp below?	
 			}
@@ -636,6 +795,7 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_
 	unsigned short numberOfFields = 0;
 	const char *paramName = NULL;
 	m_driver->getParamName(param_index, &paramName);
+	std::string paramNameStr = paramName;
 	if (data == 0)
 	{
 //        std::cerr << "updateParamCNV: no data for param " << paramName << std::endl;
@@ -667,10 +827,54 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_
 	ERROR_CHECK("CNVGetDataQuality", status);
     status = CNVCheckDataQuality(quality, &good);
 	ERROR_CHECK("CNVCheckDataQuality", status);
+	asynStatus p_stat;
+	int p_alarmStat, p_alarmSevr;
+	getParamStatus(param_index, p_stat, p_alarmStat, p_alarmSevr);
+	if (good == 1 && p_stat != asynSuccess)
+	{
+        std::cerr << "updateParamCNV: data for param " << paramName << " is good quality again" << std::endl;
+	    setParamStatus(param_index, asynSuccess);
+	}
+	// no else here as we don't want to check quality for alarms if good == 0 but do if good == 1
     if (good == 0)
     {
         std::cerr << "updateParamCNV: data for param " << paramName << " is not good quality: " << dataQuality(quality) << std::endl;
+	    setParamStatus(param_index, asynError);
     }
+	else if ( quality & (CNVDataQualityLowLimited | CNVDataQualityHighLimited) )
+	{
+		std::cerr << "NV has signaled CNVDataQualityLowLimited / CNVDataQualityHighLimited for " << paramName << std::endl;
+		if (p_stat == asynSuccess && p_alarmStat == epicsAlarmNone && p_alarmSevr == epicsSevNone)
+		{
+	        setParamStatus(param_index, asynSuccess, epicsAlarmHwLimit, epicsSevMinor);
+		}
+	}
+	else if ( quality & CNVDataQualityInAlarm )
+	{
+		// we should get the EPICS alarm set via our connected alarms
+		// we did try alarming here if not otherwise in alarm, but the connected alarms do not repeat
+		// so you can get race conditions and conflict especially if you gaev buffered readers for one
+		// and readers for the other
+		if (!(m_params[paramName]->connected_alarm))
+		{
+		    if (p_stat == asynSuccess && p_alarmStat == epicsAlarmNone && p_alarmSevr == epicsSevNone)
+		    {
+				std::cerr << "Unexpected Alarm for " << m_params[paramName]->nv_name << " - Alarming enabled after IOC started?" << std::endl;
+ 			    std::cerr << "Raising generic HWLIMIT/MINOR Alarm for \"" << paramName << "\"" << std::endl;
+ 			    std::cerr << "(For more specific HI/LOW etc alarms start this IOC after enabling Alarming)" << std::endl;
+	            setParamStatus(param_index, asynSuccess, epicsAlarmHwLimit, epicsSevMinor);
+		    }
+		}
+	}
+	else
+	{
+		// we only clear a hwLimit alarm here, others some as connected alarms
+		if (p_stat == asynSuccess && p_alarmStat == epicsAlarmHwLimit)
+		{
+		    std::cerr << "Clearing HWLIMIT Alarm for \"" << paramName << "\"" << std::endl;
+	        setParamStatus(param_index, asynSuccess);
+		}
+	}
     switch(type)
 	{
 		case CNVEmpty:
@@ -753,10 +957,15 @@ void NetShrVarInterface::statusCallback (void * handle, CNVConnectionStatus stat
 	if (error < 0)
 	{
 		std::cerr << "StatusCallback: " << cb_data->nv_name << ": " << CNVGetErrorDescription(error) << std::endl;
+		setParamStatus(cb_data->param_index, asynError);
 	}
 	else
 	{
 		std::cerr << "StatusCallback: " << cb_data->nv_name << " is " << connectionStatus(status) << std::endl;
+	    if (status != CNVConnected)
+	    {
+		    setParamStatus(cb_data->param_index, asynDisconnected);
+		}
 	}
 }
 
@@ -874,14 +1083,16 @@ size_t NetShrVarInterface::nParams()
 	}
 }
 
-void NetShrVarInterface::createParams(asynPortDriver* driver)
+void NetShrVarInterface::initAsynParamIds()
 {
-    static const char* functionName = "createParams";
-    m_driver = driver;
-	getParams();
+    static const char* functionName = "initAsynParamIds";
 	for(params_t::iterator it=m_params.begin(); it != m_params.end(); ++it)
 	{
 		NvItem* item = it->second;
+		if (item->id != -1)
+		{
+			continue; // already initialised
+		}
 		if (item->type == "float64")
 		{
 			m_driver->createParam(it->first.c_str(), asynParamFloat64, &(item->id));
@@ -920,6 +1131,13 @@ void NetShrVarInterface::createParams(asynPortDriver* driver)
 			                functionName, item->type.c_str(), it->first.c_str());
 		}
 	}
+}
+
+void NetShrVarInterface::createParams(asynPortDriver* driver)
+{
+    static const char* functionName = "createParams";
+    m_driver = driver;
+	getParams();
 	connectVars();
 }
 
@@ -1055,6 +1273,24 @@ void NetShrVarInterface::setValueCNV(const std::string& name, CNVData value)
 	ERROR_CHECK("setValue", error);
 }
 
+void NetShrVarInterface::setParamStatus(int param_id, asynStatus status, epicsAlarmCondition alarmStat, epicsAlarmSeverity alarmSevr)
+{
+	m_driver->lock();
+	m_driver->setParamStatus(param_id, status);
+	m_driver->setParamAlarmStatus(param_id, alarmStat);
+	m_driver->setParamAlarmSeverity(param_id, alarmSevr);
+	m_driver->unlock();	
+}
+
+void NetShrVarInterface::getParamStatus(int param_id, asynStatus& status, int& alarmStat, int& alarmSevr)
+{
+	m_driver->lock();
+	m_driver->getParamStatus(param_id, &status);
+	m_driver->getParamAlarmStatus(param_id, &alarmStat);
+	m_driver->getParamAlarmSeverity(param_id, &alarmSevr);
+	m_driver->unlock();	
+}
+
 /// This is called from a polling loop in the driver to 
 /// update values from buffered subscribers
 void NetShrVarInterface::updateValues()
@@ -1074,14 +1310,19 @@ void NetShrVarInterface::updateValues()
 			if (item->b_subscriber != NULL)
 			{
 				status = CNVGetDataFromBuffer(item->b_subscriber, &value, &dataStatus);
-				ERROR_CHECK("CNVGetDataFromBuffer", status); // may throw exception
-				if (dataStatus == CNVNewData || dataStatus == CNVDataWasLost)
+				if (status < 0)
 				{
-					updateParamCNV(item->id, value, true);
+	                std::cerr << NetShrVarException::ni_message("CNVGetDataFromBuffer", status);
+					setParamStatus(item->id, asynError);
 				}
 				if (dataStatus == CNVDataWasLost)
 				{
 					std::cerr << "NetShrVarInterface::updateValues: BufferedReader: data was lost for param \"" << it->first << "\" (" << item->nv_name << ") - is poll frequency too low?" << std::endl;
+					// set an alarm status?
+				}
+				if (dataStatus == CNVNewData || dataStatus == CNVDataWasLost)  // returns CNVStaleData if value unchanged frm last read
+				{
+					updateParamCNV(item->id, value, true);
 				}
 			}
 			else

@@ -16,6 +16,7 @@ ifeq ($(STATIC_BUILD),NO)
 USR_LDFLAGS_WIN32 += /NODEFAULTLIB:LIBCMT.LIB /NODEFAULTLIB:LIBCMTD.LIB
 endif
 
+PROD_IOC += CheckNetVar
 LIBRARY_IOC += NetShrVar
 
 ifeq (WIN32,$(OS_CLASS))
@@ -32,7 +33,6 @@ DBD += NetShrVar.dbd
 
 # specify all source files to be compiled and added to the library
 NetShrVar_SRCS += convertToString.cpp cnvconvert.cpp NetShrVarDriver.cpp NetShrVarInterface.cpp pugixml.cpp
-
 NetShrVar_LIBS += asyn
 NetShrVar_LIBS += $(EPICS_BASE_IOC_LIBS)
 
@@ -50,6 +50,12 @@ NetShrVar_SYS_LIBS_WIN32 += $(CVILIB)/cvinetv $(CVILIB)/cvisupp $(CVILIB)/cvirt
 NetShrVar_SYS_LIBS_WIN32 += user32
 
 NetShrVar_SYS_LIBS_Linux += ninetv
+
+CheckNetVar_SRCS += CheckNetVar.cpp
+CheckNetVar_LIBS += NetShrVar $(NetShrVar_LIBS)
+CheckNetVar_SYS_LIBS_WIN32 += $(NetShrVar_SYS_LIBS_WIN32)
+CheckNetVar_SYS_LIBS_Linux += $(NetShrVar_SYS_LIBS_Linux)
+
 
 #===========================
 

@@ -46,7 +46,7 @@
 	 
 	  <param name="bool1" type="boolean" fval="off" tval="on" access="BR,BW" netvar="//localhost/example/some_bool" /> 
 	  
-	  <param name="arrayU16" type="int16array" access="BR,W" netvar="//localhost/example/arrayU16" /> 
+	  <param name="arrayU16" type="int16array" access="R,W" netvar="//localhost/example/arrayU16" /> 
 
 	  <param name="arrayDble" type="float64array" access="R,BW" netvar="//localhost/example/arrayDble" /> 
 

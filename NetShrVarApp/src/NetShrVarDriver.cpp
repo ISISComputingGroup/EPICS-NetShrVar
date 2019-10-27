@@ -26,16 +26,17 @@
 #include <epicsEvent.h>
 #include <errlog.h>
 #include <iocsh.h>
+#include <alarm.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
+#include <epicsExport.h>
+
 #include "convertToString.h"
 #include "NetShrVarInterface.h"
 #include "NetShrVarDriver.h"
-
-#include <epicsExport.h>
 
 static const char *driverName="NetShrVarDriver"; ///< Name of driver for use in message printing 
 

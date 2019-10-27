@@ -11,6 +11,12 @@
 #ifndef NETSHRVAR_INTERFACE_H
 #define NETSHRVAR_INTERFACE_H
 
+#ifdef epicsExportSharedSymbols
+#define NetShrVarSymbols
+#undef epicsExportSharedSymbols
+#include <shareLib.h>
+#endif
+
 #include <stdio.h>
 
 #include <string>
@@ -26,12 +32,19 @@
 #include <epicsThread.h>
 #include <epicsExit.h>
 #include <macLib.h>
+#include <asynDriver.h>
 
 #include <cvirte.h>		
 #include <userint.h>
 #include <cvinetv.h>
 
 #include "pugixml.hpp"
+
+#ifdef NetShrVarSymbols
+#undef NetShrVarSymbols
+#define epicsExportSharedSymbols
+#include <shareLib.h>
+#endif
 
 /// option argument in NetShrVarConfigure() of @link st.cmd @endlink not used at present
 enum NetShrVarOptions { NVNothing = 0, NVSomething=1 };
@@ -40,8 +53,9 @@ struct NvItem;
 class asynPortDriver;
 struct CallbackData;
 
+
 /// Manager class for the NetVar Interaction. Parses an @link netvarconfig.xml @endlink file and provides access to the 9variables described within. 
-class NetShrVarInterface
+class epicsShareClass NetShrVarInterface
 {
 public:
 	NetShrVarInterface(const char* configSection, const char *configFile, int options);
@@ -51,13 +65,14 @@ public:
 	void createParams(asynPortDriver* driver);
 	void report(FILE* fp, int details);
 	void readValue(const char* param);
-	template<typename T> void setValue(const char* param, const T& value);
-	template<typename T> void setArrayValue(const char* param, const T* value, size_t nElements);
 	void dataTransferredCallback (void * handle, int error, CallbackData* cb_data);
 	void dataCallback (void * handle, CNVData data, CallbackData* cb_data);
 	void statusCallback (void * handle, CNVConnectionStatus status, int error, CallbackData* cb_data);
+	template<typename T> void setValue(const char* param, const T& value);
+	template<typename T> void setArrayValue(const char* param, const T* value, size_t nElements);
 	template<typename T> void readArrayValue(const char* paramName, T* value, size_t nElements, size_t* nIn);
-    template<typename T> void getAsynParamValue(int param, T& value);
+	static bool varExists(const std::string& path);
+	static bool pathExists(const std::string& path);
   
 private:
 	std::string m_configSection;  ///< section of \a configFile to load information from
@@ -72,6 +87,7 @@ private:
 	int m_writer_wait_ms; ///< how long to wait for a write operation to complete in milliseconds
 	int m_b_writer_wait_ms; ///< how long to wait for a buffered write operation to complete in milliseconds
 	
+    template<typename T> void getAsynParamValue(int param, T& value);
     char* envExpand(const char *str);
 	void getParams();
 	void setValueCNV(const std::string& name, CNVData value);
@@ -85,6 +101,10 @@ private:
 	template<CNVDataType cnvType> void updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, bool do_asyn_param_callbacks);
 	template<typename T,typename U> void updateParamArrayValueImpl(int param_index, T* val, size_t nElements);
 	void readVarInit(NvItem* item);
+    void setParamStatus(int param_id, asynStatus status, epicsAlarmCondition alarmStat = epicsAlarmNone, epicsAlarmSeverity alarmSevr = epicsSevNone);
+	void getParamStatus(int param_id, asynStatus& status, int& alarmStat, int& alarmSevr);
+    void initAsynParamIds();
+	void updateConnectedAlarmStatus(const std::string& paramName, int value, const std::string& alarmStr, epicsAlarmCondition stat, epicsAlarmSeverity sevr);
 };
 
 #endif /* NETSHRVAR_INTERFACE_H */

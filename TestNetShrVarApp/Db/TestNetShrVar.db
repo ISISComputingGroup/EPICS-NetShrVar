@@ -14,7 +14,7 @@
 # Read Network shared variable "//localhost/example/some_control" 
 record(ai, "$(P)cont1_RBV")
 {
-    field(DESC, "NSV '//localhost/example/some_control'")
+    field(DESC, "some_control")
     field(DTYP, "asynFloat64")
     field(INP,  "@asyn(nsv,0,0)cont1")
     field(PREC, "3")
@@ -24,7 +24,7 @@ record(ai, "$(P)cont1_RBV")
 # Write Network shared variable "//localhost/example/some_control" 
 record(ao, "$(P)cont1")
 {
-    field(DESC, "NSV '//localhost/example/some_control'")
+    field(DESC, "some_control")
     field(DTYP, "asynFloat64")
     field(OUT,  "@asyn(nsv,0,0)cont1")
     field(PREC, "3")
@@ -34,7 +34,7 @@ record(ao, "$(P)cont1")
 # Read Network shared variable "//localhost/example/some_control" 
 record(longin, "$(P)icont1_RBV")
 {
-    field(DESC, "NSV '//localhost/example/some_control'")
+    field(DESC, "some_control")
     field(DTYP, "asynInt32")
     field(INP,  "@asyn(nsv,0,0)icont1")
     field(SCAN, "I/O Intr")
@@ -43,7 +43,7 @@ record(longin, "$(P)icont1_RBV")
 # Write Network shared variable "//localhost/example/some_control" 
 record(longout, "$(P)icont1")
 {
-    field(DESC, "NSV '//localhost/example/some_control'")
+    field(DESC, "some_control")
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn(nsv,0,0)icont1")
 }
@@ -52,7 +52,7 @@ record(longout, "$(P)icont1")
 # Read Network shared variable "//localhost/example/some_indicator" 
 record(longin, "$(P)ind1_RBV")
 {
-    field(DESC, "NSV '//localhost/example/some_indicator'")
+    field(DESC, "some_indicator")
     field(DTYP, "asynInt32")
     field(INP,  "@asyn(nsv,0,0)ind1")
     field(SCAN, "I/O Intr")
@@ -62,7 +62,7 @@ record(longin, "$(P)ind1_RBV")
 # Write Network shared variable "//localhost/example/some_indicator" 
 record(longout, "$(P)ind1")
 {
-    field(DESC, "NSV '//localhost/example/some_indicator'")
+    field(DESC, "some_indicator")
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn(nsv,0,0)ind1")
 }
@@ -70,7 +70,7 @@ record(longout, "$(P)ind1")
 # Read Network shared variable "//localhost/example/some_indicator2" 
 record(longin, "$(P)ind2_RBV")
 {
-    field(DESC, "NSV //localhost/example/some_indicator2")
+    field(DESC, "some_indicator2")
     field(DTYP, "asynInt32")
     field(INP,  "@asyn(nsv,0,0)ind2")
     field(SCAN, "5 second")
@@ -80,7 +80,7 @@ record(longin, "$(P)ind2_RBV")
 # Write Network shared variable "//localhost/example/some_indicator2" 
 record(longout, "$(P)ind2")
 {
-    field(DESC, "NSV //localhost/example/some_indicator2")
+    field(DESC, "some_indicator2")
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn(nsv,0,0)ind2")
 }
@@ -92,7 +92,7 @@ record(longout, "$(P)ind2")
 # Read Network shared variable "//localhost/example/some_string" 
 record(stringin, "$(P)strcont1_RBV")
 {
-    field(DESC, "NSV '//localhost/example/some_string'")
+    field(DESC, "some_string")
     field(DTYP, "asynOctetRead")
     field(INP,  "@asyn(nsv,0,0)strcont1")
     field(SCAN, "I/O Intr")
@@ -101,7 +101,7 @@ record(stringin, "$(P)strcont1_RBV")
 # Write Network shared variable "//localhost/example/some_string" 
 record(stringout, "$(P)strcont1")
 {
-    field(DESC, "NSV '//localhost/example/some_string'")
+    field(DESC, "some_string")
     field(DTYP, "asynOctetWrite")
     field(OUT,  "@asyn(nsv,0,0)strcont1")
 }
@@ -109,7 +109,7 @@ record(stringout, "$(P)strcont1")
 # Read Network shared variable "//localhost/example/some_string" 
 record(waveform, "$(P)strcont1WF_RBV")
 {
-    field(DESC, "NSV '//localhost/example/some_string'")
+    field(DESC, "some_string")
     field(DTYP, "asynOctetRead")
 	field(FTVL, "CHAR")
 	field(NELM, 256)
@@ -120,7 +120,7 @@ record(waveform, "$(P)strcont1WF_RBV")
 # Write Network shared variable "//localhost/example/some_string" 
 record(waveform, "$(P)strcont1WF")
 {
-    field(DESC, "NSV '//localhost/example/some_string'")
+    field(DESC, "some_string")
     field(DTYP, "asynOctetWrite")
 	field(FTVL, "CHAR")
 	field(NELM, 256)
@@ -130,7 +130,7 @@ record(waveform, "$(P)strcont1WF")
 # Read Network shared variable "//localhost/example/some_bool" 
 record(bi, "$(P)bool1_RBV")
 {
-    field(DESC, "NSV '//localhost/example/some_bool'")
+    field(DESC, "some_bool")
     field(DTYP, "asynInt32")
     field(INP,  "@asyn(nsv,0,0)bool1")
     field(SCAN, "I/O Intr")
@@ -141,7 +141,7 @@ record(bi, "$(P)bool1_RBV")
 # Write Network shared variable "//localhost/example/some_bool" 
 record(bo, "$(P)bool1")
 {
-    field(DESC, "NSV '//localhost/example/some_bool'")
+    field(DESC, "some_bool")
     field(DTYP, "asynInt32")
     field(OUT,  "@asyn(nsv,0,0)bool1")
     field(ZNAM, "off")
@@ -192,7 +192,7 @@ record(waveform, "$(P)array2")
 # Read Network shared variable "//localhost/example/some_struct"  struct field index 1
 record(ai, "$(P)struct1_RBV")
 {
-    field(DESC, "NSV '//localhost/example/some_struct'[1]")
+    field(DESC, "some_struct[1]")
     field(DTYP, "asynFloat64")
     field(INP,  "@asyn(nsv,0,0)struct1")
     field(PREC, "3")
@@ -202,7 +202,7 @@ record(ai, "$(P)struct1_RBV")
 # Write Network shared variable "//localhost/example/some_struct"  struct field index 1
 record(ao, "$(P)struct1")
 {
-    field(DESC, "NSV '//localhost/example/some_struct'[1]")
+    field(DESC, "some_struct[1]")
     field(DTYP, "asynFloat64")
     field(OUT,  "@asyn(nsv,0,0)struct1")
     field(PREC, "3")
