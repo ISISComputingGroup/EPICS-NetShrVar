@@ -138,6 +138,7 @@ struct NvItem
 	unsigned access; ///< combination of #NvAccessMode
 	int field; ///< if we refer to a struct, this is the index of the field (starting at 0), otherwise it is -1 
 	int id; ///< asyn parameter id, -1 if not assigned
+	bool connected_alarm;
 	std::vector<char> array_data; ///< only used for array parameters, contains cached copy of data as this is not stored in usual asyn parameter map
 	CNVSubscriber subscriber;
 	CNVBufferedSubscriber b_subscriber;
@@ -146,7 +147,7 @@ struct NvItem
 	CNVBufferedWriter b_writer;
 	epicsTimeStamp epicsTS; ///< timestamp of shared variable update
 	NvItem(const std::string& nv_name_, const char* type_, unsigned access_, int field_) : nv_name(nv_name_), type(type_), access(access_),
-		field(field_), id(-1), subscriber(0), b_subscriber(0), writer(0), b_writer(0), reader(0)
+		field(field_), id(-1), subscriber(0), b_subscriber(0), writer(0), b_writer(0), reader(0), connected_alarm(false)
 	{ 
 	    memset(&epicsTS, 0, sizeof(epicsTS));
 	    std::replace(nv_name.begin(), nv_name.end(), '/', '\\'); // we accept / as well as \ in the XML file for path to variable
@@ -392,7 +393,7 @@ void NetShrVarInterface::connectVars()
 	params_t new_params;
 	for(params_t::const_iterator it=m_params.begin(); it != m_params.end(); ++it)
 	{
-		const NvItem* item = it->second;
+		NvItem* item = it->second;
 		std::string param_name = it->first;
 		if (pathExists(item->nv_name))
 		{
@@ -402,10 +403,13 @@ void NetShrVarInterface::connectVars()
 				if (pathExists(prefix + "Enable"))
 				{
 					std::cerr << "Adding " << alarm_fields[i] << " alarm field for " << item->nv_name << " (asyn parameter: " << param_name << ")" << std::endl;
-					new_params[param_name + "_" + alarm_fields[i] + "_Enable"] = new NvItem(prefix + "Enable", "boolean", NvItem::Read, -1);
+					item->connected_alarm = true;
+					new_params[param_name + "_" + alarm_fields[i] + "_Enable"] = new NvItem(prefix + "Enable", "boolean", NvItem::Read|NvItem::Write, -1);
 					new_params[param_name + "_" + alarm_fields[i] + "_Set"] = new NvItem(prefix + "Set", "boolean", NvItem::Read, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_level"] = new NvItem(prefix + "level", "float64", NvItem::Read, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_deadband"] = new NvItem(prefix + "deadband", "float64", NvItem::Read, -1);
+					new_params[param_name + "_" + alarm_fields[i] + "_Ack"] = new NvItem(prefix + "Ack", "boolean", NvItem::Read, -1);
+					new_params[param_name + "_" + alarm_fields[i] + "_AckType"] = new NvItem(prefix + "AckType", "int32", NvItem::Read|NvItem::Write, -1);
+					new_params[param_name + "_" + alarm_fields[i] + "_level"] = new NvItem(prefix + "level", "float64", NvItem::Read|NvItem::Write, -1);
+					new_params[param_name + "_" + alarm_fields[i] + "_deadband"] = new NvItem(prefix + "deadband", "float64", NvItem::Read|NvItem::Write, -1);
 				}
 			}
 		}
@@ -851,13 +855,23 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_
 		// we did try alarming here if not otherwise in alarm, but the connected alarms do not repeat
 		// so you can get race conditions and conflict especially if you gaev buffered readers for one
 		// and readers for the other
+		if (!(m_params[paramName]->connected_alarm))
+		{
+		    if (p_stat == asynSuccess && p_alarmStat == epicsAlarmNone && p_alarmSevr == epicsSevNone)
+		    {
+				std::cerr << "Unexpected Alarm for " << m_params[paramName]->nv_name << " - Alarming enabled after IOC started?" << std::endl;
+ 			    std::cerr << "Raising generic HWLIMIT/MINOR Alarm for \"" << paramName << "\"" << std::endl;
+ 			    std::cerr << "(For more specific HI/LOW etc alarms start this IOC after enabling Alarming)" << std::endl;
+	            setParamStatus(param_index, asynSuccess, epicsAlarmHwLimit, epicsSevMinor);
+		    }
+		}
 	}
 	else
 	{
 		// we only clear a hwLimit alarm here, others some as connected alarms
 		if (p_stat == asynSuccess && p_alarmStat == epicsAlarmHwLimit)
 		{
-		    std::cerr << "NV has cleared CNVDataQualityLowLimited / CNVDataQualityHighLimited for " << paramName << std::endl;
+		    std::cerr << "Clearing HWLIMIT Alarm for \"" << paramName << "\"" << std::endl;
 	        setParamStatus(param_index, asynSuccess);
 		}
 	}

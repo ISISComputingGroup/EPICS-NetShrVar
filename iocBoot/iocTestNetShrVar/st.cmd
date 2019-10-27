@@ -19,7 +19,15 @@ TestNetShrVar_registerRecordDeviceDriver pdbbase
 NetShrVarConfigure("nsv", "sec1", "$(TOP)/TestNetShrVarApp/src/netvarconfig.xml", 100, 0)
 
 ## Load our record instances
+
+## Basic network shared variable access.
 dbLoadRecords("db/TestNetShrVar.db","P=TEST:")
+
+## Records to access shared variable alarm fields if alarming is enabled.
+## Records will still go into alarm state without this being loaded, this is
+## to demonstrate how you could modify shared variable alarm settings
+## from EPICS PVs 
+#dbLoadRecords("db/TestNetShrVarAlarms.db","P=TEST:")
 
 cd ${TOP}/iocBoot/${IOC}
 iocInit

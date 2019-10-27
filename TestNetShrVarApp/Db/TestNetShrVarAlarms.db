@@ -1,0 +1,44 @@
+##
+## records for accessing shared variable alarm settings from EPICS.
+## These are not necessary for records to go into alarm, rather they are needed
+## if you wish to know or modify what the alarm levels are from EPICS
+## For example the "cont1" parameter will go into HIHI alarm without needing
+## these records, but if you wish to access the level that caused it to go into
+## HIHI alarm you would need records like this. Also if you wanted to change the
+## HIHI alarm level without using the National Instruments interface you would need
+## these records. Alarming via the shared variables is independent of the EPICS
+## alarm system i.e HIHI and HHSV do not need to be set for it to work. If they are
+## both set then you will get the two alarm system competing. If you kept the two
+## systems in sync by e.g. having some closed loop ao records to keep HIHI EPICS level
+## and the national instruements HiHi alarm level at the same value then you may not see
+## any issues, 
+## values in sync then it may work OK.  
+
+## configure alarms in either in EPICS or NI shared variables.
+## This reads the HiHi alarm level of the network variable referred to 
+## via asyn parameter "cont1"
+## This required alarming to be setup via NI distributed system manager
+record(ai, "$(P)cont1_HiHi_level_RBV")
+{
+    field(DESC, "Alarm level")
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn(nsv,0,0)cont1_HiHi_level")
+    field(SCAN, "I/O Intr")
+}
+
+## This sets the HiHi alarm level of the network variable
+record(ao, "$(P)cont1_HiHi_level")
+{
+    field(DESC, "Set Alarm level")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn(nsv,0,0)cont1_HiHi_level")
+}
+
+## As well as _level you can access _Set and , _deadband and _Enable _Ack, _AckType of Alarms
+## an ao record in closed loop mode could be used to copy _level from 
+## shared variables to a PV HIHI if required for display purposed, the PV will
+## go into alarm without this being done though and there is no need to set HHSV.
+## Setting HIHI on the PV will not directly affect the shared variable, however
+## a closed loop record monitoring HIHI and the writing this value back to 
+## e.g. cont1_HiHi_level could be used to achieve this 
+## 
