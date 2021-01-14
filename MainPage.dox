@@ -153,6 +153,12 @@ to see all your connections to shared variables and
 To see the EPICS process variables that have been created to connect to these. Process variables are the externally visible
 names and these are connected by the program to the asyn parameters displayed in asynReport above.
 
+The PVs created with an _RBV suffix will be EPICS input records and update when the corresponding shared variable updates.
+The ones without _RBV are EPICS output records and so will not update on shared variable changes, they are just used to 
+write to the shared variable from EPICS.
+So if you need to both read and write to the same shared variable you will need to create two PVs, one for setting 
+and one for readback, both linked to the same shared variable via the XML file.
+ 
 You can read the value of a variable using the dbgf commandat the epics> IOC prompt:
 <PRE>
     dbgf TEST:ind1_RBV
