@@ -86,4 +86,12 @@
 		<Property Name="type" Type="Str">Network</Property>
 		<Property Name="typeDesc" Type="Bin">&amp;A#!!!!!!!)!"1!&amp;!!!-!%!!!@````]!!!!"!!%!!!!U-!!!!"9!A!!!!!!"!!R!5Q&gt;798*J97ZU!!%!!"9!A!!!!!!"!!1!!!!"!!!!!!!!!!!!!!!!!!!</Property>
 	</Item>
+	<Item Name="timestamp" Type="Variable">
+		<Property Name="featurePacks" Type="Str">Network</Property>
+		<Property Name="Network:UseBinding" Type="Str">False</Property>
+		<Property Name="Network:UseBuffering" Type="Str">False</Property>
+		<Property Name="numTypedefs" Type="UInt">0</Property>
+		<Property Name="type" Type="Str">Network</Property>
+		<Property Name="typeDesc" Type="Bin">&amp;A#!!!!!!!)!"1!&amp;!!!-!%!!!@````]!!!!"!!%!!!""01!!!"9!A!!!!!!#!!V!#!!(4H6N:8*J9Q!=1%!!!@````]!!!^"=H*B?3"P:C"637ZU.D1!!1!"!!!!!!!!!!!!!!!!</Property>
+	</Item>
 </Library>

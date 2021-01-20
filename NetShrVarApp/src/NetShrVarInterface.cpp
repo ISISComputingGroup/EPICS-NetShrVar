@@ -12,6 +12,7 @@
 
 //#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 #ifdef _WIN32
+#define NOMINMAX
 #include <windows.h>
 #include <comutil.h>
 #else
@@ -29,6 +30,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cstring>
+#include <limits>
 
 #include <cvirte.h>		
 #include <userint.h>
@@ -55,6 +57,12 @@
 #define MAX_PATH_LEN 256
 
 static const char *driverName="NetShrVarInterface"; ///< Name of driver for use in message printing 
+
+struct lv_timestamp
+{
+    int64_t sec_from_epoch; ///< from 01/01/1904 00:00:00.00 UTC
+    uint64_t frac;
+};
 
 /// An STL exception object encapsulating a shared variable error message
 class NetShrVarException : public std::runtime_error
@@ -569,7 +577,7 @@ void NetShrVarInterface::updateParamValue(int param_index, T val, epicsTimeStamp
 	m_driver->lock();
 	m_driver->getParamName(param_index, &paramName);
 	m_driver->setTimeStamp(epicsTS);
-	if (m_params[paramName]->type == "float64")
+	if (m_params[paramName]->type == "float64" ||  m_params[paramName]->type == "ftimestamp")
 	{
 	    m_driver->setDoubleParam(param_index, convertToScalar<double>(val));
 	}
@@ -582,7 +590,7 @@ void NetShrVarInterface::updateParamValue(int param_index, T val, epicsTimeStamp
 	    updateConnectedAlarmStatus(paramName, intVal, "Lo", epicsAlarmLow, epicsSevMinor);
 	    updateConnectedAlarmStatus(paramName, intVal, "LoLo", epicsAlarmLoLo, epicsSevMajor);
 	}
-	else if (m_params[paramName]->type == "string")
+	else if (m_params[paramName]->type == "string" || m_params[paramName]->type == "timestamp")
 	{
 	    m_driver->setStringParam(param_index, convertToPtr<char>(val));
 	}
@@ -616,8 +624,18 @@ void NetShrVarInterface::updateParamArrayValueImpl(int param_index, T* val, size
 	}
 }
 
+// labview timestamp is seconds since 01-01-1904 00:00:00
+// epics timestamp epoch is seconds since 01-01-1990 00:00:00
+static void convertLabviewTimeToEpicsTime(uint64_t* lv_time, epicsTimeStamp* epicsTS)
+{
+    static const uint64_t epoch_diff = 2713996800u; // seconds from 01-01-1904 to 01-01-1990
+    static const uint64_t to_nsec = std::numeric_limits<uint64_t>::max() / 1000000000u;
+    epicsTS->secPastEpoch = lv_time[0] - epoch_diff;
+    epicsTS->nsec = lv_time[1] / to_nsec;
+}
+
 template<typename T>
-void NetShrVarInterface::updateParamArrayValue(int param_index, T* val, size_t nElements, epicsTimeStamp* epicsTS)
+void NetShrVarInterface::updateParamArrayValue(int param_index, T* val, size_t nElements, epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks)
 {
 	const char *paramName = NULL;
 	m_driver->getParamName(param_index, &paramName);
@@ -643,6 +661,31 @@ void NetShrVarInterface::updateParamArrayValue(int param_index, T* val, size_t n
 	else if (m_params[paramName]->type == "int8array")
 	{
 		updateParamArrayValueImpl<T,epicsInt8>(param_index, val, nElements);
+	}
+	else if (m_params[paramName]->type == "timestamp" || m_params[paramName]->type == "ftimestamp") // this is an array of two uint64 elements 
+	{
+        if ( nElements == 2 && sizeof(T) == sizeof(uint64_t) )
+        {
+            uint64_t* time_data = reinterpret_cast<uint64_t*>(val);
+            convertLabviewTimeToEpicsTime(time_data, epicsTS);
+	        // we do not need to call m_driver->setTimeStamp(epicsTS) as this is done in updateParamValue
+	        // we do not need to correct m_params[paramName]->epicsTS as we are not really an array
+            if (m_params[paramName]->type == "timestamp")
+            {                
+                char time_buffer[40]; // max size of epics simple string type
+                epicsTimeToStrftime(time_buffer, sizeof(time_buffer), "%Y-%m-%dT%H:%M:%S.%06f", epicsTS);
+                updateParamValue(param_index, time_buffer, epicsTS, do_asyn_param_callbacks);
+            }
+            else
+            {
+                double dval = epicsTS->secPastEpoch + epicsTS->nsec / 1e9;
+                updateParamValue(param_index, dval, epicsTS, do_asyn_param_callbacks);
+            }
+        }
+        else
+        {
+	        std::cerr << "updateParamArrayValue: timestamp param \"" << paramName << "\" not given UInt64[2] array" << std::endl;
+        }
 	}
 	else
 	{
@@ -750,7 +793,7 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 			{
 		        status = CNVGetArrayDataValue(data, type, val, nElements);
 	            ERROR_CHECK("CNVGetArrayDataValue", status);
-	            updateParamArrayValue(param_index, val, nElements, &epicsTS);
+	            updateParamArrayValue(param_index, val, nElements, &epicsTS, do_asyn_param_callbacks);
 		        delete[] val;
 			}
 		}
@@ -795,6 +838,10 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_
 	unsigned short numberOfFields = 0;
 	const char *paramName = NULL;
 	m_driver->getParamName(param_index, &paramName);
+	if (paramName == NULL)
+	{
+		return;
+	}
 	std::string paramNameStr = paramName;
 	if (data == 0)
 	{
@@ -1093,7 +1140,7 @@ void NetShrVarInterface::initAsynParamIds()
 		{
 			continue; // already initialised
 		}
-		if (item->type == "float64")
+		if (item->type == "float64" || item->type == "ftimestamp")
 		{
 			m_driver->createParam(it->first.c_str(), asynParamFloat64, &(item->id));
 		}
@@ -1101,7 +1148,7 @@ void NetShrVarInterface::initAsynParamIds()
 		{
 			m_driver->createParam(it->first.c_str(), asynParamInt32, &(item->id));
 		}
-		else if (item->type == "string")
+		else if (item->type == "string" || item->type == "timestamp")
 		{
 			m_driver->createParam(it->first.c_str(), asynParamOctet, &(item->id));
 		}

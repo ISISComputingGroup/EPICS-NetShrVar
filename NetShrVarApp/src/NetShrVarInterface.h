@@ -96,7 +96,7 @@ private:
 	void connectVars();
     bool convertTimeStamp(unsigned __int64 timestamp, epicsTimeStamp *epicsTS);
 	template<typename T> void updateParamValue(int param_index, T val, epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks);
-	template<typename T> void updateParamArrayValue(int param_index, T* val, size_t nElements, epicsTimeStamp* epicsTS);
+	template<typename T> void updateParamArrayValue(int param_index, T* val, size_t nElements, epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks);
 	void updateParamCNV (int param_index, CNVData data, bool do_asyn_param_callbacks);
 	template<CNVDataType cnvType> void updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, bool do_asyn_param_callbacks);
 	template<typename T,typename U> void updateParamArrayValueImpl(int param_index, T* val, size_t nElements);

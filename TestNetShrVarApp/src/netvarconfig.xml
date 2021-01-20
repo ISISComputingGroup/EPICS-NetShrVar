@@ -50,7 +50,22 @@
 
 	  <param name="arrayDble" type="float64array" access="R,BW" netvar="//localhost/example/arrayDble" /> 
 
-	  <param name="struct1" type="float64" access="BR,BW" netvar="//localhost/example/some_struct" field="1" /> 
+      <!-- a timestamp parameter is a string with the timestamp, however if TSE=-2 the the update time of the variable
+           is equal to the value of the timestamp rather than when the shared variable was updated
+		   the shared variable type it redrences should be an array of unsigned 64bit integer -->	  
+	  <param name="timestamp" type="timestamp" access="R" netvar="//localhost/example/timestamp" />
+	  
+      <!-- an ftimestamp if like a timestamp but a float64 of seconds since epics epoch -->
+	  <param name="ftimestamp" type="ftimestamp" access="R" netvar="//localhost/example/timestamp" />
+
+      <!-- CVI is not able to read a waveform data type, so a variant or structure/cluster must be used instead in labview
+	       and a network variable of type variant created in either case -->
+	  
+      <!-- fields in a structure need to be indexed by number not name, only reading is supported
+	       if you use "reorder controls in cluster" option for cluster in labview, you can see the 
+		   field index to use, index starts at 0 -->		   
+	  <param name="struct_dt" type="float64" access="R" netvar="//localhost/example/some_struct" field="1" /> 
+	  <param name="struct_Y" type="float64array" access="R" netvar="//localhost/example/some_struct" field="2" /> 
 
 	</section>
   
