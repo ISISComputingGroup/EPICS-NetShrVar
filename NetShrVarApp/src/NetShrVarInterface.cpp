@@ -188,17 +188,16 @@ struct NvItem
 	{
 		int error, conn_error;
 		CNVConnectionStatus status;
-		fprintf(fp, "  Connection type: %s", conn_type);
 		if (handle == 0)
 		{
-		    fprintf(fp, " Status: <not being used>\n");
 		    return;
 		}
+		fprintf(fp, "  Connection type: %s", conn_type);
 		try
 		{
 			error = CNVGetConnectionAttribute(handle, CNVConnectionStatusAttribute, &status);
 			ERROR_CHECK("CNVGetConnectionAttribute", error);
-			fprintf(fp, " status: %s", connectionStatus(status));
+			fprintf(fp, "  status: %s", connectionStatus(status));
 			error = CNVGetConnectionAttribute(handle, CNVConnectionErrorAttribute, &conn_error);
 			ERROR_CHECK("CNVGetConnectionAttribute", error);
 			if (conn_error < 0)
@@ -212,7 +211,7 @@ struct NvItem
 				ERROR_CHECK("CNVGetConnectionAttribute", error);
 				error = CNVGetConnectionAttribute(handle, CNVClientBufferMaximumItemsAttribute, &maxitems);
 				ERROR_CHECK("CNVGetConnectionAttribute", error);
-				fprintf(fp, " Client buffer: %d items (buffer size = %d)", nitems, maxitems);
+				fprintf(fp, "  Client buffer: %d items (buffer size = %d)", nitems, maxitems);
 			}
 			fprintf(fp, "\n");
 		}
@@ -880,7 +879,17 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, epicsTim
 	    CNVData* fields = new CNVData[numberOfFields];
 	    status = CNVGetStructFields(data, fields, numberOfFields);
 		ERROR_CHECK("CNVGetStructFields", status);
-		updateParamCNV(param_index, fields[field], epicsTS, do_asyn_param_callbacks);
+		// loop round all params interested in this structure
+		// i.e. not just param_index and field
+		const std::string& this_nv = m_params[paramName]->nv_name;
+		for (params_t::const_iterator it = m_params.begin(); it != m_params.end(); ++it)
+		{
+			const NvItem* item = it->second;
+			if (item->field != -1 && item->nv_name == this_nv)
+			{
+				updateParamCNV(item->id, fields[item->field], epicsTS, do_asyn_param_callbacks);
+			}
+		}
 		delete[] fields;
 		return;
 	}

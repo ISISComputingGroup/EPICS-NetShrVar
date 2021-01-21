@@ -63,9 +63,14 @@
 	  
       <!-- fields in a structure need to be indexed by number not name, only reading is supported
 	       if you use "reorder controls in cluster" option for cluster in labview, you can see the 
-		   field index to use, index starts at 0 -->		   
+		   field index to use, index starts at 0
+		   Also the who shared variable structure updates at the same time, so you do not need to subscribe to 
+           it for every item that reads a field. For example both struct_dt and struct_Y refer to the same
+           network variable (but different fields) so only one of them needs to subscribe and the other will
+           get updated at the same time  		   
+		   -->
 	  <param name="struct_dt" type="float64" access="R" netvar="//localhost/example/some_struct" field="1" /> 
-	  <param name="struct_Y" type="float64array" access="R" netvar="//localhost/example/some_struct" field="2" /> 
+	  <param name="struct_Y" type="float64array" access="" netvar="//localhost/example/some_struct" field="2" /> 
 
 	</section>
   
