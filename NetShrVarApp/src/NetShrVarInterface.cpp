@@ -146,6 +146,7 @@ struct NvItem
 	unsigned access; ///< combination of #NvAccessMode
 	int field; ///< if we refer to a struct, this is the index of the field (starting at 0), otherwise it is -1 
 	int id; ///< asyn parameter id, -1 if not assigned
+    std::string ts_param; ///< parameter that is timestamp source
 	bool connected_alarm;
 	std::vector<char> array_data; ///< only used for array parameters, contains cached copy of data as this is not stored in usual asyn parameter map
 	CNVSubscriber subscriber;
@@ -154,8 +155,8 @@ struct NvItem
 	CNVReader reader;
 	CNVBufferedWriter b_writer;
 	epicsTimeStamp epicsTS; ///< timestamp of shared variable update
-	NvItem(const std::string& nv_name_, const char* type_, unsigned access_, int field_) : nv_name(nv_name_), type(type_), access(access_),
-		field(field_), id(-1), subscriber(0), b_subscriber(0), writer(0), b_writer(0), reader(0), connected_alarm(false)
+	NvItem(const std::string& nv_name_, const char* type_, unsigned access_, int field_, const std::string& ts_param_) : nv_name(nv_name_), type(type_), access(access_),
+		field(field_), ts_param(ts_param_), id(-1), subscriber(0), b_subscriber(0), writer(0), b_writer(0), reader(0), connected_alarm(false) 
 	{ 
 	    memset(&epicsTS, 0, sizeof(epicsTS));
 	    std::replace(nv_name.begin(), nv_name.end(), '/', '\\'); // we accept / as well as \ in the XML file for path to variable
@@ -418,12 +419,12 @@ void NetShrVarInterface::connectVars()
 				{
 					std::cerr << "Adding " << alarm_fields[i] << " alarm field for " << item->nv_name << " (asyn parameter: " << param_name << ")" << std::endl;
 					item->connected_alarm = true;
-					new_params[param_name + "_" + alarm_fields[i] + "_Enable"] = new NvItem(prefix + "Enable", "boolean", NvItem::Read|NvItem::Write, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_Set"] = new NvItem(prefix + "Set", "boolean", NvItem::Read, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_Ack"] = new NvItem(prefix + "Ack", "boolean", NvItem::Read, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_AckType"] = new NvItem(prefix + "AckType", "int32", NvItem::Read|NvItem::Write, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_level"] = new NvItem(prefix + "level", "float64", NvItem::Read|NvItem::Write, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_deadband"] = new NvItem(prefix + "deadband", "float64", NvItem::Read|NvItem::Write, -1);
+					new_params[param_name + "_" + alarm_fields[i] + "_Enable"] = new NvItem(prefix + "Enable", "boolean", NvItem::Read|NvItem::Write, -1, "");
+					new_params[param_name + "_" + alarm_fields[i] + "_Set"] = new NvItem(prefix + "Set", "boolean", NvItem::Read, -1, "");
+					new_params[param_name + "_" + alarm_fields[i] + "_Ack"] = new NvItem(prefix + "Ack", "boolean", NvItem::Read, -1, "");
+					new_params[param_name + "_" + alarm_fields[i] + "_AckType"] = new NvItem(prefix + "AckType", "int32", NvItem::Read|NvItem::Write, -1, "");
+					new_params[param_name + "_" + alarm_fields[i] + "_level"] = new NvItem(prefix + "level", "float64", NvItem::Read|NvItem::Write, -1, "");
+					new_params[param_name + "_" + alarm_fields[i] + "_deadband"] = new NvItem(prefix + "deadband", "float64", NvItem::Read|NvItem::Write, -1, "");
 				}
 			}
 		}
@@ -855,13 +856,21 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, epicsTim
     // so we need to propagate the structure time when we recurse into its fields
     if (epicsTS == NULL)
     {
-        status = CNVGetDataUTCTimestamp(data, &timestamp);
-	    ERROR_CHECK("CNVGetDataUTCTimestamp", status);
-	    if (!convertTimeStamp(timestamp, &epicsTSLocal))
+        const std::string& ts_param = m_params[paramName]->ts_param;
+        if (ts_param.size() > 0)
         {
-            epicsTimeGetCurrent(&epicsTSLocal);
+            epicsTS = &(m_params[ts_param]->epicsTS);
         }
-        epicsTS = &epicsTSLocal;
+        else
+        {
+            status = CNVGetDataUTCTimestamp(data, &timestamp);
+	        ERROR_CHECK("CNVGetDataUTCTimestamp", status);
+	        if (!convertTimeStamp(timestamp, &epicsTSLocal))
+            {
+                epicsTimeGetCurrent(&epicsTSLocal);
+            }
+            epicsTS = &epicsTSLocal;
+        }
     }
 	if (type == CNVStruct)
 	{
@@ -1259,6 +1268,7 @@ void NetShrVarInterface::getParams()
 		std::string attr3 = node.node().attribute("access").value();
 		std::string attr4 = envExpand(node.node().attribute("netvar").value());
 		std::string attr5 = node.node().attribute("field").value();	
+		std::string attr6 = node.node().attribute("ts_param").value();
 		if (attr5.size() == 0)
 		{
 			field = -1;
@@ -1299,8 +1309,12 @@ void NetShrVarInterface::getParams()
 			str = epicsStrtok_r(NULL, ",", &last_str);
 		}
 		free(access_str);
-		m_params[attr1] = new NvItem(attr4.c_str(),attr2.c_str(),access_mode,field);
-		
+		if (attr6.size() > 0 && m_params.find(attr6) == m_params.end())
+		{
+			std::cerr << "getParams: Unable to link unknown \"" << attr6 << "\" as ts_param for " << attr1 << std::endl;
+			attr6 = "";
+		}
+		m_params[attr1] = new NvItem(attr4.c_str(),attr2.c_str(),access_mode,field,attr6);
 	}	
 }
 

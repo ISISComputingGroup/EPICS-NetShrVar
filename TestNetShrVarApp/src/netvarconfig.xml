@@ -48,15 +48,17 @@
 	  
 	  <param name="arrayU16" type="int16array" access="R,W" netvar="//localhost/example/arrayU16" /> 
 
-	  <param name="arrayDble" type="float64array" access="R,BW" netvar="//localhost/example/arrayDble" /> 
-
       <!-- a timestamp parameter is a string with the timestamp, however if TSE=-2 the the update time of the variable
            is equal to the value of the timestamp rather than when the shared variable was updated
 		   the shared variable type it redrences should be an array of unsigned 64bit integer -->	  
-	  <param name="timestamp" type="timestamp" access="R" netvar="//localhost/example/timestamp" />
+	  <param name="tstamp" type="timestamp" access="R" netvar="//localhost/example/timestamp" />
 	  
       <!-- an ftimestamp if like a timestamp but a float64 of seconds since epics epoch -->
-	  <param name="ftimestamp" type="ftimestamp" access="R" netvar="//localhost/example/timestamp" />
+	  <param name="ftstamp" type="ftimestamp" access="R" netvar="//localhost/example/timestamp" />
+
+      <!-- if we specify a "ftimestamp" or "timestamp" type variable in the ts_param option, then this parameter will be used 
+	       to set the timestamp on the shared variable -->
+	  <param name="arrayDble" type="float64array" access="R,BW" ts_param="ftstamp" netvar="//localhost/example/arrayDble" /> 
 
       <!-- CVI is not able to read a waveform data type, so a variant or structure/cluster must be used instead in labview
 	       and a network variable of type variant created in either case -->

@@ -197,7 +197,7 @@ record(stringin, "$(P)timestamp_RBV")
 {
     field(DESC, "timestamp")
     field(DTYP, "asynOctetRead")
-    field(INP,  "@asyn(nsv,0,0)timestamp")
+    field(INP,  "@asyn(nsv,0,0)tstamp")
     field(SCAN, "I/O Intr")
 	field(TSE, -2)
 }
@@ -208,7 +208,7 @@ record(ai, "$(P)ftimestamp_RBV")
 {
     field(DESC, "ftimestamp")
     field(DTYP, "asynFloat64")
-    field(INP,  "@asyn(nsv,0,0)ftimestamp")
+    field(INP,  "@asyn(nsv,0,0)ftstamp")
     field(SCAN, "I/O Intr")
 	field(TSE, -2)
 }
