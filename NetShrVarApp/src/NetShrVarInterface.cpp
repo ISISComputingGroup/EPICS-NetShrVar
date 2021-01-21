@@ -882,13 +882,29 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, epicsTim
 		// loop round all params interested in this structure
 		// i.e. not just param_index and field
 		const std::string& this_nv = m_params[paramName]->nv_name;
-		for (params_t::const_iterator it = m_params.begin(); it != m_params.end(); ++it)
+		// do timestamp fields first as we may use them to sync
+		std::vector<const NvItem*> items_left;
+		items_left.reserve(numberOfFields);
+		for (params_t::iterator it = m_params.begin(); it != m_params.end(); ++it)
 		{
-			const NvItem* item = it->second;
+			NvItem* item = it->second;
 			if (item->field != -1 && item->nv_name == this_nv)
 			{
-				updateParamCNV(item->id, fields[item->field], epicsTS, do_asyn_param_callbacks);
+				if (item->type == "timestamp" || item->type == "ftimestamp")
+				{
+					updateParamCNV(item->id, fields[item->field], NULL, do_asyn_param_callbacks);
+					epicsTS = &(item->epicsTS); // use timestamp from this record for other items
+				}
+				else
+				{
+					items_left.push_back(item);
+				}
 			}
+		}
+		for (std::vector<const NvItem*>::const_iterator it = items_left.begin(); it != items_left.end(); ++it)
+		{
+			const NvItem* item = *it;
+			updateParamCNV(item->id, fields[item->field], epicsTS, do_asyn_param_callbacks);
 		}
 		delete[] fields;
 		return;

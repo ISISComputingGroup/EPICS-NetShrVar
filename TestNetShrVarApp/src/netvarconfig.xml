@@ -67,10 +67,14 @@
 		   Also the who shared variable structure updates at the same time, so you do not need to subscribe to 
            it for every item that reads a field. For example both struct_dt and struct_Y refer to the same
            network variable (but different fields) so only one of them needs to subscribe and the other will
-           get updated at the same time  		   
+           get updated at the same time  	
+
+           if a timestamp or ftimestamp item such as struct_ta is referenced inside a structure, then the
+           value of this variable is used as the tiomestamp on all items inside the cluster/structure  		   
 		   -->
 	  <param name="struct_dt" type="float64" access="R" netvar="//localhost/example/some_struct" field="1" /> 
 	  <param name="struct_Y" type="float64array" access="" netvar="//localhost/example/some_struct" field="2" /> 
+	  <param name="struct_ta" type="ftimestamp" access="" netvar="//localhost/example/some_struct" field="3" /> 
 
 	</section>
   
