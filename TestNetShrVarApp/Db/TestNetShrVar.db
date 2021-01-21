@@ -226,6 +226,15 @@ record(waveform, "$(P)struct_Y_RBV")
 	field(TSE, -2)
 }
 
+record(ai, "$(P)struct_dt_RBV")
+{
+    field(DESC, "dt")
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn(nsv,0,0)struct_dt")
+    field(SCAN, "I/O Intr")
+	field(TSE, -2)
+}
+
 # Write struct Network shared variable 
 #record(ao, "$(P)struct")
 #{
