@@ -854,23 +854,20 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, epicsTim
 	ERROR_CHECK("CNVGetDataType", status);
     // the update time for an item in a shared variable structure/cluster is the upadate time of the structure variable
     // so we need to propagate the structure time when we recurse into its fields
-    if (epicsTS == NULL)
+	const std::string& ts_param = m_params[paramName]->ts_param;
+	if (ts_param.size() > 0)
+	{
+		epicsTS = &(m_params[ts_param]->epicsTS);
+	}
+	if (epicsTS == NULL)
     {
-        const std::string& ts_param = m_params[paramName]->ts_param;
-        if (ts_param.size() > 0)
+        status = CNVGetDataUTCTimestamp(data, &timestamp);
+	    ERROR_CHECK("CNVGetDataUTCTimestamp", status);
+	    if (!convertTimeStamp(timestamp, &epicsTSLocal))
         {
-            epicsTS = &(m_params[ts_param]->epicsTS);
+            epicsTimeGetCurrent(&epicsTSLocal);
         }
-        else
-        {
-            status = CNVGetDataUTCTimestamp(data, &timestamp);
-	        ERROR_CHECK("CNVGetDataUTCTimestamp", status);
-	        if (!convertTimeStamp(timestamp, &epicsTSLocal))
-            {
-                epicsTimeGetCurrent(&epicsTSLocal);
-            }
-            epicsTS = &epicsTSLocal;
-        }
+        epicsTS = &epicsTSLocal;
     }
 	if (type == CNVStruct)
 	{
@@ -891,18 +888,18 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, epicsTim
 		// loop round all params interested in this structure
 		// i.e. not just param_index and field
 		const std::string& this_nv = m_params[paramName]->nv_name;
-		// do timestamp fields first as we may use them to sync
+		// we so timestamp fields first so if we are linked to them
+		// via ts_param then we get the correct time value applied later
 		std::vector<const NvItem*> items_left;
 		items_left.reserve(numberOfFields);
 		for (params_t::iterator it = m_params.begin(); it != m_params.end(); ++it)
 		{
 			NvItem* item = it->second;
-			if (item->field != -1 && item->nv_name == this_nv)
+			if (item->field != -1 && item->nv_name == this_nv)   
 			{
 				if (item->type == "timestamp" || item->type == "ftimestamp")
 				{
 					updateParamCNV(item->id, fields[item->field], NULL, do_asyn_param_callbacks);
-					epicsTS = &(item->epicsTS); // use timestamp from this record for other items
 				}
 				else
 				{
