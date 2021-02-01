@@ -912,6 +912,11 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, epicsTim
 			const NvItem* item = *it;
 			updateParamCNV(item->id, fields[item->field], epicsTS, do_asyn_param_callbacks);
 		}
+        for(int i=0; i<numberOfFields; ++i)
+        {
+            status = CNVDisposeData(fields[i]);
+		    ERROR_CHECK("CNVDisposeData", status);
+		}
 		delete[] fields;
 		return;
 	}
