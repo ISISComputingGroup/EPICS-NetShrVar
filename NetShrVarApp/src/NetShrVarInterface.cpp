@@ -774,6 +774,7 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 	    ERROR_CHECK("CNVGetScalarDataValue", status);
 	    updateParamValue(param_index, val, epicsTS, do_asyn_param_callbacks);
         CNV2C<cnvType>::free(val);
+        updateBytesReadCount(sizeof(CNV2C<cnvType>::ctype));
 	}
 	else if (nDims <= maxDims)
 	{
@@ -795,6 +796,7 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 	            ERROR_CHECK("CNVGetArrayDataValue", status);
 	            updateParamArrayValue(param_index, val, nElements, epicsTS, do_asyn_param_callbacks);
 		        delete[] val;
+                updateBytesReadCount(nElements * sizeof(CNV2C<cnvType>::ctype));
 			}
 		}
 	}
@@ -1112,8 +1114,10 @@ char* NetShrVarInterface::envExpand(const char *str)
 NetShrVarInterface::NetShrVarInterface(const char *configSection, const char* configFile, int options) : 
 				m_configSection(configSection), m_options(options), m_mac_env(NULL), 
 				m_writer_wait_ms(5000/*also CNVWaitForever or CNVDoNotWait*/), 
-				m_b_writer_wait_ms(CNVDoNotWait/*also CNVWaitForever or CNVDoNotWait*/)
+				m_b_writer_wait_ms(CNVDoNotWait/*also CNVWaitForever or CNVDoNotWait*/),
+                m_items_read(0), m_bytes_read(0)
 {
+    ftime(&m_last_report);
 	epicsThreadOnce(&onceId, initCV, NULL);
 	// load current environment into m_mac_env, this is so we can create a macEnvExpand() equivalent 
 	// but tied to the environment at a specific time. It is useful if we want to load the same 
@@ -1446,9 +1450,22 @@ void NetShrVarInterface::updateValues()
 /// Helper for EPICS driver report function
 void NetShrVarInterface::report(FILE* fp, int details)
 {
+    static uint32_t last_items_read = 0;
+    static uint64_t last_bytes_read = 0;
+    struct timeb now;
 	fprintf(fp, "XML ConfigFile: \"%s\"\n", m_configFile.c_str());
 	fprintf(fp, "XML ConfigFile section: \"%s\"\n", m_configSection.c_str());
 	fprintf(fp, "NetShrVarConfigure() Options: %d\n", m_options);
+    fprintf(fp, "Total items read: %llu\n", static_cast<unsigned long long>(m_items_read));
+    fprintf(fp, "Total bytes read: %llu\n", static_cast<unsigned long long>(m_bytes_read));
+    ftime(&now);
+    double tdiff = difftime(now.time, m_last_report.time) + ((int)now.millitm - (int)m_last_report.millitm) / 1000.0;
+    fprintf(fp, "* Data rates are average since last call to this command *\n");
+    fprintf(fp, "Items read /s: %f\n", (m_items_read - last_items_read) / tdiff );
+    fprintf(fp, "Bytes read /s: %f\n", (m_bytes_read - last_bytes_read) / tdiff );
+    last_items_read = m_items_read;
+    last_bytes_read = m_bytes_read;
+    m_last_report = now;
 	for(params_t::iterator it=m_params.begin(); it != m_params.end(); ++it)
 	{
 		NvItem* item = it->second;

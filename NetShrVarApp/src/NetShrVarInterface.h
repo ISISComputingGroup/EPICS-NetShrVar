@@ -18,6 +18,7 @@
 #endif
 
 #include <stdio.h>
+#include <sys/timeb.h>
 
 #include <string>
 #include <vector>
@@ -27,6 +28,7 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <atomic>
 
 #include <epicsMutex.h>
 #include <epicsThread.h>
@@ -86,6 +88,17 @@ private:
     MAC_HANDLE* m_mac_env;
 	int m_writer_wait_ms; ///< how long to wait for a write operation to complete in milliseconds
 	int m_b_writer_wait_ms; ///< how long to wait for a buffered write operation to complete in milliseconds
+    
+    std::atomic<uint32_t> m_items_read;
+    std::atomic<uint64_t> m_bytes_read;
+    struct timeb m_last_report;
+    
+    inline void updateBytesReadCount(unsigned nbytes)
+    {
+        ++m_items_read;
+        m_bytes_read += nbytes;
+    }
+        
 	
     template<typename T> void getAsynParamValue(int param, T& value);
     char* envExpand(const char *str);
