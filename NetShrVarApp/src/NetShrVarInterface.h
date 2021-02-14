@@ -30,11 +30,15 @@
 #include <iostream>
 
 #if defined(_WIN32) && defined(_MSC_VER) && _MSC_VER < 1700 /* Pre VS2012 */
-#include <boost/atomic.hpp>
-namespace atomicns = boost;
+// boost atomic is not header only, volatile should be enough here
+// as we will no longer care about 2010 soon 
+#define NSV_EMULATE_ATOMIC
+typedef volatile uint32_t my_atomic_uint32_t;
+typedef volatile int64_t my_atomic_uint64_t;   // needs to be signed for later Interlocked operation
 #else
 #include <atomic>
-namespace atomicns = std;
+typedef std::atomic<uint32_t> my_atomic_uint32_t;
+typedef std::atomic<uint64_t> my_atomic_uint64_t;
 #endif
 
 #include <epicsMutex.h>
@@ -96,16 +100,20 @@ private:
 	int m_writer_wait_ms; ///< how long to wait for a write operation to complete in milliseconds
 	int m_b_writer_wait_ms; ///< how long to wait for a buffered write operation to complete in milliseconds
     
-    atomicns::atomic<uint32_t> m_items_read;
-    atomicns::atomic<uint64_t> m_bytes_read;
+    my_atomic_uint32_t m_items_read;
+    my_atomic_uint64_t m_bytes_read;
     struct timeb m_last_report;
     
     inline void updateBytesReadCount(unsigned nbytes)
     {
+#ifdef NSV_EMULATE_ATOMIC
+        InterlockedIncrement(&m_items_read);
+        InterlockedExchangeAdd64(&m_bytes_read, nbytes);
+#else
         ++m_items_read;
         m_bytes_read += nbytes;
+#endif
     }
-        
 	
     template<typename T> void getAsynParamValue(int param, T& value);
     char* envExpand(const char *str);
