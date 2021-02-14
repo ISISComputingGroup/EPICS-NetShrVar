@@ -30,6 +30,7 @@
 		<Property Name="specify.custom.address" Type="Bool">false</Property>
 		<Item Name="example.lvlib" Type="Library" URL="../example.lvlib"/>
 		<Item Name="example.vi" Type="VI" URL="../example.vi"/>
+		<Item Name="half_min_ts.vi" Type="VI" URL="../../../../../NetStreams/master/TestNetStreamsApp/src/half_min_ts.vi"/>
 		<Item Name="Dependencies" Type="Dependencies"/>
 		<Item Name="Build Specifications" Type="Build"/>
 	</Item>
