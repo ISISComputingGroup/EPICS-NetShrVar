@@ -8,6 +8,9 @@
 ASYN=$(SUPPORT)/asyn/master
 ONCRPC=$(SUPPORT)/oncrpc/master
 
+# this is only needed to provide <atomic> for Visual Studio 2010 compiles
+BOOST=$(EPICS_ROOT)/libraries/master/boost
+
 -include $(TOP)/configure/RELEASE.private
 
 include $(TOP)/../../../ISIS_CONFIG
