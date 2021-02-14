@@ -28,6 +28,7 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <cstdint>
 
 #if defined(_WIN32) && defined(_MSC_VER) && _MSC_VER < 1700 /* Pre VS2012 */
 // boost atomic is not header only, volatile should be enough here
