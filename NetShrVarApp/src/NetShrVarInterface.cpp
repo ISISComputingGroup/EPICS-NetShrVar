@@ -168,7 +168,7 @@ struct NvItem
 	    fprintf(fp, "Report for asyn parameter \"%s\" type \"%s\" network variable \"%s\"\n", name.c_str(), type.c_str(), nv_name.c_str());
 		if (array_data.size() > 0)
 		{
-			fprintf(fp, "  Current array size: %d\n", (int)array_data.size());
+			fprintf(fp, "  Current array size (bytes): %d\n", (int)array_data.size());
 		}
 		if (field != -1)
 		{
