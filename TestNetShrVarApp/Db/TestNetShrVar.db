@@ -96,6 +96,7 @@ record(stringin, "$(P)strcont1_RBV")
     field(DTYP, "asynOctetRead")
     field(INP,  "@asyn(nsv,0,0)strcont1")
     field(SCAN, "I/O Intr")
+	field(TSE, -2)
 }
 
 # Write Network shared variable "//localhost/example/some_string" 
@@ -115,6 +116,7 @@ record(waveform, "$(P)strcont1WF_RBV")
 	field(NELM, 256)
     field(INP,  "@asyn(nsv,0,0)strcont1")
     field(SCAN, "I/O Intr")
+	field(TSE, -2)
 }
 
 # Write Network shared variable "//localhost/example/some_string" 
@@ -153,7 +155,7 @@ record(waveform, "$(P)array1_RBV")
 {
     field(DTYP, "asynInt16ArrayIn")
 	field(FTVL, "SHORT")
-	field(NELM, 1000)
+	field(NELM, 100000)
     field(INP,  "@asyn(nsv,0,0)arrayU16")
     field(PREC, "3")
     field(SCAN, "I/O Intr")
@@ -164,7 +166,7 @@ record(waveform, "$(P)array1")
 {
     field(DTYP, "asynInt16ArrayOut")
 	field(FTVL, "SHORT")
-	field(NELM, 1000)
+	field(NELM, 100000)
     field(INP,  "@asyn(nsv,0,0)arrayU16")
     field(PREC, "3")
 }
@@ -173,7 +175,7 @@ record(waveform, "$(P)array2_RBV")
 {
     field(DTYP, "asynFloat64ArrayIn")
 	field(FTVL, "DOUBLE")
-	field(NELM, 1000)
+	field(NELM, 100000)
     field(INP,  "@asyn(nsv,0,0)arrayDble")
     field(PREC, "3")
     field(SCAN, "I/O Intr")
@@ -184,27 +186,61 @@ record(waveform, "$(P)array2")
 {
     field(DTYP, "asynFloat64ArrayOut")
 	field(FTVL, "DOUBLE")
-	field(NELM, 1000)
+	field(NELM, 100000)
     field(INP,  "@asyn(nsv,0,0)arrayDble")
     field(PREC, "3")
 }
 
-# Read Network shared variable "//localhost/example/some_struct"  struct field index 1
-record(ai, "$(P)struct1_RBV")
+# read a labview timestamp, stored in a uint64[2] shared variable
+# if TSE is -2 then time of PV is set to value of timestamp variable rather than update time of shared variable
+record(stringin, "$(P)timestamp_RBV")
 {
-    field(DESC, "some_struct[1]")
-    field(DTYP, "asynFloat64")
-    field(INP,  "@asyn(nsv,0,0)struct1")
-    field(PREC, "3")
+    field(DESC, "timestamp")
+    field(DTYP, "asynOctetRead")
+    field(INP,  "@asyn(nsv,0,0)tstamp")
     field(SCAN, "I/O Intr")
+	field(TSE, -2)
 }
 
-# Write Network shared variable "//localhost/example/some_struct"  struct field index 1
-record(ao, "$(P)struct1")
+# read a labview timestamp, stored in a uint64[2] shared variable
+# if TSE is -2 then time of PV is set to value of timestamp variable rather than update time of shared variable
+record(ai, "$(P)ftimestamp_RBV")
 {
-    field(DESC, "some_struct[1]")
+    field(DESC, "ftimestamp")
     field(DTYP, "asynFloat64")
-    field(OUT,  "@asyn(nsv,0,0)struct1")
-    field(PREC, "3")
+    field(INP,  "@asyn(nsv,0,0)ftstamp")
+    field(SCAN, "I/O Intr")
+	field(TSE, -2)
 }
+
+# Read part of struct network shared variable
+record(waveform, "$(P)struct_Y_RBV")
+{
+    field(DESC, "some_struct")
+    field(DTYP, "asynFloat64ArrayIn")
+    field(INP,  "@asyn(nsv,0,0)struct_Y")
+	field(FTVL, "DOUBLE")
+	field(NELM, 100000)
+    field(PREC, "3")
+    field(SCAN, "I/O Intr")
+	field(TSE, -2)
+}
+
+record(ai, "$(P)struct_dt_RBV")
+{
+    field(DESC, "dt")
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn(nsv,0,0)struct_dt")
+    field(SCAN, "I/O Intr")
+	field(TSE, -2)
+}
+
+# Write struct Network shared variable 
+#record(ao, "$(P)struct")
+#{
+#    field(DESC, "some_struct[1]")
+#    field(DTYP, "asynFloat64")
+#    field(OUT,  "@asyn(nsv,0,0)struct1")
+#    field(PREC, "3")
+#}
 

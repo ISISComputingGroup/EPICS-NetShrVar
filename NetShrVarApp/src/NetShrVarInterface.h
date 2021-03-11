@@ -18,6 +18,7 @@
 #endif
 
 #include <stdio.h>
+#include <sys/timeb.h>
 
 #include <string>
 #include <vector>
@@ -27,6 +28,19 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <cstdint>
+
+#if defined(_WIN32) && defined(_MSC_VER) && _MSC_VER < 1700 /* Pre VS2012 */
+// boost atomic is not header only, volatile should be enough here
+// as we will no longer care about 2010 soon 
+#define NSV_EMULATE_ATOMIC
+typedef volatile uint32_t my_atomic_uint32_t;
+typedef volatile int64_t my_atomic_uint64_t;   // needs to be signed for later Interlocked operation
+#else
+#include <atomic>
+typedef std::atomic<uint32_t> my_atomic_uint32_t;
+typedef std::atomic<uint64_t> my_atomic_uint64_t;
+#endif
 
 #include <epicsMutex.h>
 #include <epicsThread.h>
@@ -86,6 +100,21 @@ private:
     MAC_HANDLE* m_mac_env;
 	int m_writer_wait_ms; ///< how long to wait for a write operation to complete in milliseconds
 	int m_b_writer_wait_ms; ///< how long to wait for a buffered write operation to complete in milliseconds
+    
+    my_atomic_uint32_t m_items_read;
+    my_atomic_uint64_t m_bytes_read;
+    struct timeb m_last_report;
+    
+    inline void updateBytesReadCount(unsigned nbytes)
+    {
+#ifdef NSV_EMULATE_ATOMIC
+        InterlockedIncrement(&m_items_read);
+        InterlockedExchangeAdd64(&m_bytes_read, nbytes);
+#else
+        ++m_items_read;
+        m_bytes_read += nbytes;
+#endif
+    }
 	
     template<typename T> void getAsynParamValue(int param, T& value);
     char* envExpand(const char *str);
@@ -96,9 +125,11 @@ private:
 	void connectVars();
     bool convertTimeStamp(unsigned __int64 timestamp, epicsTimeStamp *epicsTS);
 	template<typename T> void updateParamValue(int param_index, T val, epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks);
-	template<typename T> void updateParamArrayValue(int param_index, T* val, size_t nElements, epicsTimeStamp* epicsTS);
-	void updateParamCNV (int param_index, CNVData data, bool do_asyn_param_callbacks);
-	template<CNVDataType cnvType> void updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, bool do_asyn_param_callbacks);
+	template<typename T> void updateParamArrayValue(int param_index, T* val, size_t nElements,
+                                                            epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks);
+	void updateParamCNV (int param_index, CNVData data, epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks);
+	template<CNVDataType cnvType> void updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, 
+                                       unsigned int nDims, epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks);
 	template<typename T,typename U> void updateParamArrayValueImpl(int param_index, T* val, size_t nElements);
 	void readVarInit(NvItem* item);
     void setParamStatus(int param_id, asynStatus status, epicsAlarmCondition alarmStat = epicsAlarmNone, epicsAlarmSeverity alarmSevr = epicsSevNone);

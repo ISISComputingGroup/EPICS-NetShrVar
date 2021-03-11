@@ -46,11 +46,45 @@
 	 
 	  <param name="bool1" type="boolean" fval="off" tval="on" access="BR,BW" netvar="//localhost/example/some_bool" /> 
 	  
-	  <param name="arrayU16" type="int16array" access="R,W" netvar="//localhost/example/arrayU16" /> 
+      <!-- a timestamp parameter is a string with the timestamp, however if TSE=-2 the the update time of the variable
+           is equal to the value of the timestamp rather than when the shared variable was updated
+		   the shared variable type it redrences should be an array of unsigned 64bit integer -->	  
+	  <param name="tstamp" type="timestamp" access="R" netvar="//localhost/example/timestamp" />
+	  
+      <!-- an ftimestamp if like a timestamp but a float64 of seconds since epics epoch -->
+	  <param name="ftstamp" type="ftimestamp" access="R" netvar="//localhost/example/timestamp" />
 
-	  <param name="arrayDble" type="float64array" access="R,BW" netvar="//localhost/example/arrayDble" /> 
+      <!-- if we specify a "ftimestamp" or "timestamp" type variable in the ts_param option, then this parameter will be used 
+	       to set the timestamp on the shared variable. The ts_param must refer to a parameter name already 
+		   defined earlier in the XML  	 -->
+	  <param name="arrayU16" type="int16array" ts_param="ftstamp" access="R,W" netvar="//localhost/example/arrayU16" /> 
 
-	  <param name="struct1" type="float64" access="BR,BW" netvar="//localhost/example/some_struct" field="1" /> 
+      <!-- if we specify with_ts we mean the 128bit timestamp is embedded in the first few array elements. So for a double
+           array this is two elements. This should be a straight cast i.e. no conversion, see example.vi
+           I am not sure of we will get endian issue, but as double and int64 are same size this may get
+           sorted out automatically -->
+	  <param name="arrayDble" type="float64array" access="R,BW" with_ts="true" netvar="//localhost/example/arrayDble" /> 
+
+      <!-- CVI is not able to read a waveform data type, so a variant or structure/cluster must be used instead in labview
+	       and a network variable of type variant created in either case -->
+	  
+      <!-- fields in a structure need to be indexed by number not name, only reading is supported
+	       if you use "reorder controls in cluster" option for cluster in labview, you can see the 
+		   field index to use, index starts at 0
+		   
+		   The whole shared variable structure updates at the same time, so you do not need to subscribe to 
+           it for every item that reads a field. For example both struct_dt and struct_Y refer to the same
+           network variable (but different fields) so only one item referring to the shared variable
+		   (struct_dt in this case) needs to subscribe (access="R") and the other will get updated at the same time. 	   
+
+           You can also use ts_param to refer to a structure member to be used for PV timestamp. As the whole structure
+           shared variable is read at the same time, this may provide better synchronisation between timestamp and
+           data - you can refer to a separate shared variable outside the structure, but you may not be guaranteed the
+           variable for this timetamp is always updated in sync with the data variable.  		   
+		   -->
+	  <param name="struct_dt" type="float64" access="R" netvar="//localhost/example/some_struct" field="1" /> 
+	  <param name="struct_ta" type="ftimestamp" access="" netvar="//localhost/example/some_struct" field="3" /> 
+	  <param name="struct_Y" type="float64array" access="" ts_param="struct_ta" netvar="//localhost/example/some_struct" field="2" /> 
 
 	</section>
   

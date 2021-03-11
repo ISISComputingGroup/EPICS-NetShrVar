@@ -12,6 +12,7 @@
 
 //#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 #ifdef _WIN32
+#define NOMINMAX
 #include <windows.h>
 #include <comutil.h>
 #else
@@ -29,6 +30,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cstring>
+#include <limits>
 
 #include <cvirte.h>		
 #include <userint.h>
@@ -55,6 +57,12 @@
 #define MAX_PATH_LEN 256
 
 static const char *driverName="NetShrVarInterface"; ///< Name of driver for use in message printing 
+
+struct lv_timestamp
+{
+    int64_t sec_from_epoch; ///< from 01/01/1904 00:00:00.00 UTC
+    uint64_t frac;
+};
 
 /// An STL exception object encapsulating a shared variable error message
 class NetShrVarException : public std::runtime_error
@@ -138,6 +146,8 @@ struct NvItem
 	unsigned access; ///< combination of #NvAccessMode
 	int field; ///< if we refer to a struct, this is the index of the field (starting at 0), otherwise it is -1 
 	int id; ///< asyn parameter id, -1 if not assigned
+    std::string ts_param; ///< parameter that is timestamp source
+    bool with_ts; ///< timestamp is encoded in first few array elements
 	bool connected_alarm;
 	std::vector<char> array_data; ///< only used for array parameters, contains cached copy of data as this is not stored in usual asyn parameter map
 	CNVSubscriber subscriber;
@@ -146,8 +156,8 @@ struct NvItem
 	CNVReader reader;
 	CNVBufferedWriter b_writer;
 	epicsTimeStamp epicsTS; ///< timestamp of shared variable update
-	NvItem(const std::string& nv_name_, const char* type_, unsigned access_, int field_) : nv_name(nv_name_), type(type_), access(access_),
-		field(field_), id(-1), subscriber(0), b_subscriber(0), writer(0), b_writer(0), reader(0), connected_alarm(false)
+	NvItem(const std::string& nv_name_, const char* type_, unsigned access_, int field_, const std::string& ts_param_, bool with_ts_) : nv_name(nv_name_), type(type_), access(access_),
+		field(field_), ts_param(ts_param_), with_ts(with_ts_), id(-1), subscriber(0), b_subscriber(0), writer(0), b_writer(0), reader(0), connected_alarm(false) 
 	{ 
 	    memset(&epicsTS, 0, sizeof(epicsTS));
 	    std::replace(nv_name.begin(), nv_name.end(), '/', '\\'); // we accept / as well as \ in the XML file for path to variable
@@ -158,7 +168,7 @@ struct NvItem
 	    fprintf(fp, "Report for asyn parameter \"%s\" type \"%s\" network variable \"%s\"\n", name.c_str(), type.c_str(), nv_name.c_str());
 		if (array_data.size() > 0)
 		{
-			fprintf(fp, "  Current array size: %d\n", (int)array_data.size());
+			fprintf(fp, "  Current array size (bytes): %d\n", (int)array_data.size());
 		}
 		if (field != -1)
 		{
@@ -180,31 +190,37 @@ struct NvItem
 	{
 		int error, conn_error;
 		CNVConnectionStatus status;
-		fprintf(fp, "  Connection type: %s", conn_type);
 		if (handle == 0)
 		{
-		    fprintf(fp, " Status: <not being used>\n");
 		    return;
 		}
-		error = CNVGetConnectionAttribute(handle, CNVConnectionStatusAttribute, &status);
-		ERROR_CHECK("CNVGetConnectionAttribute", error);
-		fprintf(fp, " status: %s", connectionStatus(status));
-		error = CNVGetConnectionAttribute(handle, CNVConnectionErrorAttribute, &conn_error);
-		ERROR_CHECK("CNVGetConnectionAttribute", error);
-		if (conn_error < 0)
+		fprintf(fp, "  Connection type: %s", conn_type);
+		try
 		{
-			fprintf(fp, " error present: %s", CNVGetErrorDescription(conn_error));
+			error = CNVGetConnectionAttribute(handle, CNVConnectionStatusAttribute, &status);
+			ERROR_CHECK("CNVGetConnectionAttribute", error);
+			fprintf(fp, "  status: %s", connectionStatus(status));
+			error = CNVGetConnectionAttribute(handle, CNVConnectionErrorAttribute, &conn_error);
+			ERROR_CHECK("CNVGetConnectionAttribute", error);
+			if (conn_error < 0)
+			{
+				fprintf(fp, " error present: %s", CNVGetErrorDescription(conn_error));
+			}
+			if (buffered)
+			{
+				int nitems, maxitems;
+				error = CNVGetConnectionAttribute(handle, CNVClientBufferNumberOfItemsAttribute, &nitems);
+				ERROR_CHECK("CNVGetConnectionAttribute", error);
+				error = CNVGetConnectionAttribute(handle, CNVClientBufferMaximumItemsAttribute, &maxitems);
+				ERROR_CHECK("CNVGetConnectionAttribute", error);
+				fprintf(fp, "  Client buffer: %d items (buffer size = %d)", nitems, maxitems);
+			}
+			fprintf(fp, "\n");
 		}
-		if (buffered)
+		catch (const std::exception& ex)
 		{
-			int nitems, maxitems;
-			error = CNVGetConnectionAttribute(handle, CNVClientBufferNumberOfItemsAttribute, &nitems);
-			ERROR_CHECK("CNVGetConnectionAttribute", error);
-			error = CNVGetConnectionAttribute(handle, CNVClientBufferMaximumItemsAttribute, &maxitems);
-			ERROR_CHECK("CNVGetConnectionAttribute", error);
-			fprintf(fp, " Client buffer: %d items (buffer size = %d)", nitems, maxitems);
+			fprintf(fp, "  Unable to get connection status: %s\n", ex.what());
 		}
-		fprintf(fp, "\n");
 	}
 };
 
@@ -234,7 +250,7 @@ void NetShrVarInterface::readVarInit(NvItem* item)
 	    ERROR_CHECK("CNVRead", status);
 	    if (cvalue != 0)
 	    {
-		    updateParamCNV(item->id, cvalue, true);
+		    updateParamCNV(item->id, cvalue, NULL, true);
 	    }
 	    CNVDispose(reader);
 	}
@@ -404,12 +420,12 @@ void NetShrVarInterface::connectVars()
 				{
 					std::cerr << "Adding " << alarm_fields[i] << " alarm field for " << item->nv_name << " (asyn parameter: " << param_name << ")" << std::endl;
 					item->connected_alarm = true;
-					new_params[param_name + "_" + alarm_fields[i] + "_Enable"] = new NvItem(prefix + "Enable", "boolean", NvItem::Read|NvItem::Write, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_Set"] = new NvItem(prefix + "Set", "boolean", NvItem::Read, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_Ack"] = new NvItem(prefix + "Ack", "boolean", NvItem::Read, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_AckType"] = new NvItem(prefix + "AckType", "int32", NvItem::Read|NvItem::Write, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_level"] = new NvItem(prefix + "level", "float64", NvItem::Read|NvItem::Write, -1);
-					new_params[param_name + "_" + alarm_fields[i] + "_deadband"] = new NvItem(prefix + "deadband", "float64", NvItem::Read|NvItem::Write, -1);
+					new_params[param_name + "_" + alarm_fields[i] + "_Enable"] = new NvItem(prefix + "Enable", "boolean", NvItem::Read|NvItem::Write, -1, "", false);
+					new_params[param_name + "_" + alarm_fields[i] + "_Set"] = new NvItem(prefix + "Set", "boolean", NvItem::Read, -1, "", false);
+					new_params[param_name + "_" + alarm_fields[i] + "_Ack"] = new NvItem(prefix + "Ack", "boolean", NvItem::Read, -1, "", false);
+					new_params[param_name + "_" + alarm_fields[i] + "_AckType"] = new NvItem(prefix + "AckType", "int32", NvItem::Read|NvItem::Write, -1, "", false);
+					new_params[param_name + "_" + alarm_fields[i] + "_level"] = new NvItem(prefix + "level", "float64", NvItem::Read|NvItem::Write, -1, "", false);
+					new_params[param_name + "_" + alarm_fields[i] + "_deadband"] = new NvItem(prefix + "deadband", "float64", NvItem::Read|NvItem::Write, -1, "", false);
 				}
 			}
 		}
@@ -522,7 +538,7 @@ void NetShrVarInterface::dataCallback (void * handle, CNVData data, CallbackData
 //    std::cerr << "dataCallback: index " << cb_data->param_index << std::endl; 
     try
 	{
-        updateParamCNV(cb_data->param_index, data, true);
+        updateParamCNV(cb_data->param_index, data, NULL, true);
 	}
 	catch(const std::exception& ex)
 	{
@@ -569,7 +585,8 @@ void NetShrVarInterface::updateParamValue(int param_index, T val, epicsTimeStamp
 	m_driver->lock();
 	m_driver->getParamName(param_index, &paramName);
 	m_driver->setTimeStamp(epicsTS);
-	if (m_params[paramName]->type == "float64")
+    m_params[paramName]->epicsTS = *epicsTS;
+	if (m_params[paramName]->type == "float64" ||  m_params[paramName]->type == "ftimestamp")
 	{
 	    m_driver->setDoubleParam(param_index, convertToScalar<double>(val));
 	}
@@ -582,7 +599,7 @@ void NetShrVarInterface::updateParamValue(int param_index, T val, epicsTimeStamp
 	    updateConnectedAlarmStatus(paramName, intVal, "Lo", epicsAlarmLow, epicsSevMinor);
 	    updateConnectedAlarmStatus(paramName, intVal, "LoLo", epicsAlarmLoLo, epicsSevMajor);
 	}
-	else if (m_params[paramName]->type == "string")
+	else if (m_params[paramName]->type == "string" || m_params[paramName]->type == "timestamp")
 	{
 	    m_driver->setStringParam(param_index, convertToPtr<char>(val));
 	}
@@ -616,11 +633,40 @@ void NetShrVarInterface::updateParamArrayValueImpl(int param_index, T* val, size
 	}
 }
 
+// labview timestamp is seconds since 01-01-1904 00:00:00
+// epics timestamp epoch is seconds since 01-01-1990 00:00:00
+static void convertLabviewTimeToEpicsTime(const uint64_t* lv_time, epicsTimeStamp* epicsTS)
+{
+    static const uint64_t epoch_diff = 2713996800u; // seconds from 01-01-1904 to 01-01-1990
+    static const uint64_t to_nsec = std::numeric_limits<uint64_t>::max() / 1000000000u;
+    epicsTS->secPastEpoch = lv_time[0] - epoch_diff;
+    epicsTS->nsec = lv_time[1] / to_nsec;
+}
+
 template<typename T>
-void NetShrVarInterface::updateParamArrayValue(int param_index, T* val, size_t nElements, epicsTimeStamp* epicsTS)
+void NetShrVarInterface::updateParamArrayValue(int param_index, T* val, size_t nElements, epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks)
 {
 	const char *paramName = NULL;
+    epicsTimeStamp epicsTSv;
 	m_driver->getParamName(param_index, &paramName);
+    bool with_ts = m_params[paramName]->with_ts;
+    if (with_ts) // first 128bits of data are timestamp
+    {
+        size_t n_ts_elem = 16 / sizeof(T);
+        const uint64_t* time_data = reinterpret_cast<const uint64_t*>(val);
+        if (nElements > n_ts_elem)
+        {
+            convertLabviewTimeToEpicsTime(time_data, &epicsTSv);
+            val += n_ts_elem;
+            nElements -= n_ts_elem;
+            epicsTS = &epicsTSv;
+        }
+        else
+        {
+            std::cerr << "updateParamArrayValue: param \"" << paramName << "\" not enough elements for timestamp" << std::endl;
+            return;
+        }
+    }
 	m_driver->lock();
 	m_driver->setTimeStamp(epicsTS);
 	m_params[paramName]->epicsTS = *epicsTS;
@@ -643,6 +689,30 @@ void NetShrVarInterface::updateParamArrayValue(int param_index, T* val, size_t n
 	else if (m_params[paramName]->type == "int8array")
 	{
 		updateParamArrayValueImpl<T,epicsInt8>(param_index, val, nElements);
+	}
+	else if (m_params[paramName]->type == "timestamp" || m_params[paramName]->type == "ftimestamp") // this is an array of two uint64 elements 
+	{
+        if ( nElements == 2 && sizeof(T) == sizeof(uint64_t) )
+        {
+            uint64_t* time_data = reinterpret_cast<uint64_t*>(val);
+            convertLabviewTimeToEpicsTime(time_data, epicsTS);
+	        // we do not need to call m_driver->setTimeStamp(epicsTS) etc as this is done in updateParamValue
+            if (m_params[paramName]->type == "timestamp")
+            {                
+                char time_buffer[40]; // max size of epics simple string type
+                epicsTimeToStrftime(time_buffer, sizeof(time_buffer), "%Y-%m-%dT%H:%M:%S.%06f", epicsTS);
+                updateParamValue(param_index, time_buffer, epicsTS, do_asyn_param_callbacks);
+            }
+            else
+            {
+                double dval = epicsTS->secPastEpoch + epicsTS->nsec / 1e9;
+                updateParamValue(param_index, dval, epicsTS, do_asyn_param_callbacks);
+            }
+        }
+        else
+        {
+	        std::cerr << "updateParamArrayValue: timestamp param \"" << paramName << "\" not given UInt64[2] array" << std::endl;
+        }
 	}
 	else
 	{
@@ -667,7 +737,7 @@ void NetShrVarInterface::readArrayValue(const char* paramName, T* value, size_t 
 			ERROR_CHECK("CNVRead", status);
 			if (status > 0) // 0 means no new value, 1 means a new value since last read
 			{
-				updateParamCNV(item->id, cvalue, false);  ///< @todo or true?	and set timestamp below?	
+				updateParamCNV(item->id, cvalue, NULL, false);  ///< @todo or true?	and set timestamp below?	
 			}
 		}
 		else
@@ -701,7 +771,7 @@ void NetShrVarInterface::readValue(const char* param)
 			ERROR_CHECK("CNVRead", status);
 			if (cvalue != 0)
 			{
-				updateParamCNV(item->id, cvalue, true);
+				updateParamCNV(item->id, cvalue, NULL, true);
 			}
 		}
 		else
@@ -713,24 +783,18 @@ void NetShrVarInterface::readValue(const char* param)
 }
 
 template<CNVDataType cnvType>
-void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, bool do_asyn_param_callbacks)
+void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDataType type, unsigned int nDims, 
+                   epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks)
 {
-    unsigned __int64 timestamp;
 	static const int maxDims = 10;
-	epicsTimeStamp epicsTS;
-    int status = CNVGetDataUTCTimestamp(data, &timestamp);
-	ERROR_CHECK("CNVGetDataUTCTimestamp", status);
-	if (!convertTimeStamp(timestamp, &epicsTS))
-    {
-            epicsTimeGetCurrent(&epicsTS);
-    }
 	if (nDims == 0)
 	{
 	    typename CNV2C<cnvType>::ctype val;
 	    int status = CNVGetScalarDataValue (data, type, &val);
 	    ERROR_CHECK("CNVGetScalarDataValue", status);
-	    updateParamValue(param_index, val, &epicsTS, do_asyn_param_callbacks);
+	    updateParamValue(param_index, val, epicsTS, do_asyn_param_callbacks);
         CNV2C<cnvType>::free(val);
+        updateBytesReadCount(sizeof(CNV2C<cnvType>::ctype));
 	}
 	else if (nDims <= maxDims)
 	{
@@ -750,8 +814,9 @@ void NetShrVarInterface::updateParamCNVImpl(int param_index, CNVData data, CNVDa
 			{
 		        status = CNVGetArrayDataValue(data, type, val, nElements);
 	            ERROR_CHECK("CNVGetArrayDataValue", status);
-	            updateParamArrayValue(param_index, val, nElements, &epicsTS);
+	            updateParamArrayValue(param_index, val, nElements, epicsTS, do_asyn_param_callbacks);
 		        delete[] val;
+                updateBytesReadCount(nElements * sizeof(CNV2C<cnvType>::ctype));
 			}
 		}
 	}
@@ -785,7 +850,7 @@ bool NetShrVarInterface::convertTimeStamp(unsigned __int64 timestamp, epicsTimeS
     return true;
 }
 
-void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_asyn_param_callbacks)
+void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, epicsTimeStamp* epicsTS, bool do_asyn_param_callbacks)
 {
 	unsigned int	nDims = 0;
 	unsigned int	serverError;
@@ -794,7 +859,13 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_
 	int good, status;
 	unsigned short numberOfFields = 0;
 	const char *paramName = NULL;
+    unsigned __int64 timestamp;
+    epicsTimeStamp epicsTSLocal;
 	m_driver->getParamName(param_index, &paramName);
+	if (paramName == NULL)
+	{
+		return;
+	}
 	std::string paramNameStr = paramName;
 	if (data == 0)
 	{
@@ -803,6 +874,23 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_
     }
 	status = CNVGetDataType (data, &type, &nDims);
 	ERROR_CHECK("CNVGetDataType", status);
+    // the update time for an item in a shared variable structure/cluster is the upadate time of the structure variable
+    // so we need to propagate the structure time when we recurse into its fields
+	const std::string& ts_param = m_params[paramName]->ts_param;
+	if (ts_param.size() > 0)
+	{
+		epicsTS = &(m_params[ts_param]->epicsTS);
+	}
+	if (epicsTS == NULL)
+    {
+        status = CNVGetDataUTCTimestamp(data, &timestamp);
+	    ERROR_CHECK("CNVGetDataUTCTimestamp", status);
+	    if (!convertTimeStamp(timestamp, &epicsTSLocal))
+        {
+            epicsTimeGetCurrent(&epicsTSLocal);
+        }
+        epicsTS = &epicsTSLocal;
+    }
 	if (type == CNVStruct)
 	{
 		int field = m_params[paramName]->field;
@@ -819,7 +907,38 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_
 	    CNVData* fields = new CNVData[numberOfFields];
 	    status = CNVGetStructFields(data, fields, numberOfFields);
 		ERROR_CHECK("CNVGetStructFields", status);
-		updateParamCNV(param_index, fields[field], do_asyn_param_callbacks);
+		// loop round all params interested in this structure
+		// i.e. not just param_index and field
+		const std::string& this_nv = m_params[paramName]->nv_name;
+		// we so timestamp fields first so if we are linked to them
+		// via ts_param then we get the correct time value applied later
+		std::vector<const NvItem*> items_left;
+		items_left.reserve(numberOfFields);
+		for (params_t::iterator it = m_params.begin(); it != m_params.end(); ++it)
+		{
+			NvItem* item = it->second;
+			if (item->field != -1 && item->nv_name == this_nv)   
+			{
+				if (item->type == "timestamp" || item->type == "ftimestamp")
+				{
+					updateParamCNV(item->id, fields[item->field], NULL, do_asyn_param_callbacks);
+				}
+				else
+				{
+					items_left.push_back(item);
+				}
+			}
+		}
+		for (std::vector<const NvItem*>::const_iterator it = items_left.begin(); it != items_left.end(); ++it)
+		{
+			const NvItem* item = *it;
+			updateParamCNV(item->id, fields[item->field], epicsTS, do_asyn_param_callbacks);
+		}
+        for(int i=0; i<numberOfFields; ++i)
+        {
+            status = CNVDisposeData(fields[i]);
+		    ERROR_CHECK("CNVDisposeData", status);
+		}
 		delete[] fields;
 		return;
 	}
@@ -881,51 +1000,51 @@ void NetShrVarInterface::updateParamCNV (int param_index, CNVData data, bool do_
 			break;
 		
 		case CNVBool:
-			updateParamCNVImpl<CNVBool>(param_index, data, type, nDims, do_asyn_param_callbacks);
+			updateParamCNVImpl<CNVBool>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
 			break;
 			
 		case CNVString:
-			updateParamCNVImpl<CNVString>(param_index, data, type, nDims, do_asyn_param_callbacks);
+			updateParamCNVImpl<CNVString>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
 			break;
 
 		case CNVSingle:
-			updateParamCNVImpl<CNVSingle>(param_index, data, type, nDims, do_asyn_param_callbacks);
+			updateParamCNVImpl<CNVSingle>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
 			break;
 				
 		case CNVDouble:
-			updateParamCNVImpl<CNVDouble>(param_index, data, type, nDims, do_asyn_param_callbacks);
+			updateParamCNVImpl<CNVDouble>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
 			break;
 				
 		case CNVInt8:
-			updateParamCNVImpl<CNVInt8>(param_index, data, type, nDims, do_asyn_param_callbacks);
+			updateParamCNVImpl<CNVInt8>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
 			break;
 				
 		case CNVUInt8:
-			updateParamCNVImpl<CNVUInt8>(param_index, data, type, nDims, do_asyn_param_callbacks);
+			updateParamCNVImpl<CNVUInt8>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
 			break;
 				
 		case CNVInt16:
-			updateParamCNVImpl<CNVInt16>(param_index, data, type, nDims, do_asyn_param_callbacks);
+			updateParamCNVImpl<CNVInt16>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
 			break;
 				
 		case CNVUInt16:
-			updateParamCNVImpl<CNVUInt16>(param_index, data, type, nDims, do_asyn_param_callbacks);
+			updateParamCNVImpl<CNVUInt16>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
 			break;
 				
 		case CNVInt32:
-			updateParamCNVImpl<CNVInt32>(param_index, data, type, nDims, do_asyn_param_callbacks);
-				break;
+			updateParamCNVImpl<CNVInt32>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
+			break;
 				
 		case CNVUInt32:
-			updateParamCNVImpl<CNVUInt32>(param_index, data, type, nDims, do_asyn_param_callbacks);
+			updateParamCNVImpl<CNVUInt32>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
 			break;
 				
 		case CNVInt64:
-			updateParamCNVImpl<CNVInt64>(param_index, data, type, nDims, do_asyn_param_callbacks);
+			updateParamCNVImpl<CNVInt64>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
 			break;
 				
 		case CNVUInt64:
-			updateParamCNVImpl<CNVUInt64>(param_index, data, type, nDims, do_asyn_param_callbacks);
+			updateParamCNVImpl<CNVUInt64>(param_index, data, type, nDims, epicsTS, do_asyn_param_callbacks);
 			break;
 				
 		default:
@@ -1015,8 +1134,10 @@ char* NetShrVarInterface::envExpand(const char *str)
 NetShrVarInterface::NetShrVarInterface(const char *configSection, const char* configFile, int options) : 
 				m_configSection(configSection), m_options(options), m_mac_env(NULL), 
 				m_writer_wait_ms(5000/*also CNVWaitForever or CNVDoNotWait*/), 
-				m_b_writer_wait_ms(CNVDoNotWait/*also CNVWaitForever or CNVDoNotWait*/)
+				m_b_writer_wait_ms(CNVDoNotWait/*also CNVWaitForever or CNVDoNotWait*/),
+                m_items_read(0), m_bytes_read(0)
 {
+    ftime(&m_last_report);
 	epicsThreadOnce(&onceId, initCV, NULL);
 	// load current environment into m_mac_env, this is so we can create a macEnvExpand() equivalent 
 	// but tied to the environment at a specific time. It is useful if we want to load the same 
@@ -1093,7 +1214,7 @@ void NetShrVarInterface::initAsynParamIds()
 		{
 			continue; // already initialised
 		}
-		if (item->type == "float64")
+		if (item->type == "float64" || item->type == "ftimestamp")
 		{
 			m_driver->createParam(it->first.c_str(), asynParamFloat64, &(item->id));
 		}
@@ -1101,7 +1222,7 @@ void NetShrVarInterface::initAsynParamIds()
 		{
 			m_driver->createParam(it->first.c_str(), asynParamInt32, &(item->id));
 		}
-		else if (item->type == "string")
+		else if (item->type == "string" || item->type == "timestamp")
 		{
 			m_driver->createParam(it->first.c_str(), asynParamOctet, &(item->id));
 		}
@@ -1173,6 +1294,13 @@ void NetShrVarInterface::getParams()
 		std::string attr3 = node.node().attribute("access").value();
 		std::string attr4 = envExpand(node.node().attribute("netvar").value());
 		std::string attr5 = node.node().attribute("field").value();	
+		std::string attr6 = node.node().attribute("ts_param").value();
+		std::string with_ts_s = node.node().attribute("with_ts").value();
+        bool with_ts = false;
+        if (with_ts_s == "true")
+        {
+            with_ts = true;
+        }
 		if (attr5.size() == 0)
 		{
 			field = -1;
@@ -1213,8 +1341,12 @@ void NetShrVarInterface::getParams()
 			str = epicsStrtok_r(NULL, ",", &last_str);
 		}
 		free(access_str);
-		m_params[attr1] = new NvItem(attr4.c_str(),attr2.c_str(),access_mode,field);
-		
+		if (attr6.size() > 0 && m_params.find(attr6) == m_params.end())
+		{
+			std::cerr << "getParams: Unable to link unknown \"" << attr6 << "\" as ts_param for " << attr1 << std::endl;
+			attr6 = "";
+		}
+		m_params[attr1] = new NvItem(attr4.c_str(),attr2.c_str(),access_mode,field,attr6,with_ts);
 	}	
 }
 
@@ -1322,7 +1454,7 @@ void NetShrVarInterface::updateValues()
 				}
 				if (dataStatus == CNVNewData || dataStatus == CNVDataWasLost)  // returns CNVStaleData if value unchanged frm last read
 				{
-					updateParamCNV(item->id, value, true);
+					updateParamCNV(item->id, value, NULL, true);
 				}
 			}
 			else
@@ -1344,9 +1476,22 @@ void NetShrVarInterface::updateValues()
 /// Helper for EPICS driver report function
 void NetShrVarInterface::report(FILE* fp, int details)
 {
+    static uint32_t last_items_read = 0;
+    static uint64_t last_bytes_read = 0;
+    struct timeb now;
 	fprintf(fp, "XML ConfigFile: \"%s\"\n", m_configFile.c_str());
 	fprintf(fp, "XML ConfigFile section: \"%s\"\n", m_configSection.c_str());
 	fprintf(fp, "NetShrVarConfigure() Options: %d\n", m_options);
+    fprintf(fp, "Total items read: %llu\n", static_cast<unsigned long long>(m_items_read));
+    fprintf(fp, "Total bytes read: %llu\n", static_cast<unsigned long long>(m_bytes_read));
+    ftime(&now);
+    double tdiff = difftime(now.time, m_last_report.time) + ((int)now.millitm - (int)m_last_report.millitm) / 1000.0;
+    fprintf(fp, "* Data rates are average since last call to this command *\n");
+    fprintf(fp, "Items read /s: %f\n", (m_items_read - last_items_read) / tdiff );
+    fprintf(fp, "Bytes read /s: %f\n", (m_bytes_read - last_bytes_read) / tdiff );
+    last_items_read = m_items_read;
+    last_bytes_read = m_bytes_read;
+    m_last_report = now;
 	for(params_t::iterator it=m_params.begin(); it != m_params.end(); ++it)
 	{
 		NvItem* item = it->second;
