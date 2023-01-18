@@ -37,7 +37,8 @@ Features of NetShrVar are:
 <LI> Access shared variables as subscriber, writer, buffered writer or buffered reader
 <LI> Handles both simple types and arrays of simple types. For array data types, the EPICS PV bound to an NSV must be of the same data type byte size (16 or 32bit etc), 
 but can differ in sign. Simple single value types are automatically cast (double to float, short to int, int to float)
-<LI> Read (but not write to) "struct" type network variables. A separate PV of one of the above types is bound to each individual struct field of interest.
+<LI> Read and write to "struct" type network variables - a separate PV of one of the above types needs to be bound to each individual struct field of interest.
+     Note that to write to a structure involves a read all, update field, write back so there is a potential for overwrite if two fields are being updated via different PVs simultaneously   
 <LI> The timestamp of the EPICS record will be set to that of the underlying network shared variable if the DB record TSE field is set to -2
 </UL>
 
