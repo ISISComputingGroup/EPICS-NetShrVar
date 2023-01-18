@@ -236,11 +236,29 @@ record(ai, "$(P)struct_dt_RBV")
 }
 
 # Write struct Network shared variable 
-#record(ao, "$(P)struct")
-#{
-#    field(DESC, "some_struct[1]")
-#    field(DTYP, "asynFloat64")
-#    field(OUT,  "@asyn(nsv,0,0)struct1")
-#    field(PREC, "3")
-#}
+record(ao, "$(P)struct_extra")
+{
+    field(DESC, "struct_extra")
+    field(DTYP, "asynFloat64")
+    field(OUT,  "@asyn(nsv,0,0)struct_extra")
+    field(PREC, "3")
+}
 
+record(ai, "$(P)struct_extra_RBV")
+{
+    field(DESC, "struct_extra")
+    field(DTYP, "asynFloat64")
+    field(INP,  "@asyn(nsv,0,0)struct_extra")
+    field(SCAN, "I/O Intr")
+    field(PREC, "3")
+}
+
+record(waveform, "$(P)struct_extra_array")
+{
+    field(DESC, "some_struct")
+    field(DTYP, "asynFloat64ArrayOut")
+    field(INP,  "@asyn(nsv,0,0)struct_extra_array")
+	field(FTVL, "DOUBLE")
+	field(NELM, 100)
+    field(PREC, "3")
+}

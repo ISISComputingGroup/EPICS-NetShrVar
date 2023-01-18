@@ -86,6 +86,9 @@
 	  <param name="struct_ta" type="ftimestamp" access="" netvar="//localhost/example/some_struct" field="3" /> 
 	  <param name="struct_Y" type="float64array" access="" ts_param="struct_ta" netvar="//localhost/example/some_struct" field="2" /> 
 
+	  <param name="struct_extra" type="float64" access="R,W" netvar="//localhost/example/some_struct" field="4" /> 
+	  <param name="struct_extra_array" type="float64array" access="R,W" netvar="//localhost/example/some_struct" field="5" /> 
+
 	</section>
   
 </netvar>
