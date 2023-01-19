@@ -1385,11 +1385,14 @@ void NetShrVarInterface::setValueCNV(const std::string& name, CNVData value)
 	ScopedCNVData cvalue;
 	if (item->field != -1)
 	{
-        int waitTime = 3000; // in milliseconds, or CNVWaitForever 
-        CNVReader reader;
-        int error = CNVCreateReader(item->nv_name.c_str(), NULL, NULL, waitTime, 0, &reader);
-        ERROR_CHECK("CNVCreateReader", error);
-        error = CNVRead(reader, 10, &cvalue);
+        if (item->reader == NULL) {
+            int waitTime = 3000; // in milliseconds, or CNVWaitForever 
+            error = CNVCreateReader(item->nv_name.c_str(), NULL, NULL, waitTime, 0, &(item->reader));
+            ERROR_CHECK("CNVCreateReader", error);
+        }
+		m_driver->unlock(); // to allow DataCallback to work while we try to read
+        error = CNVRead(item->reader, 10, &cvalue);
+		m_driver->lock();
         ERROR_CHECK("CNVRead", error);
         if (cvalue != 0)
         {
@@ -1422,7 +1425,11 @@ void NetShrVarInterface::setValueCNV(const std::string& name, CNVData value)
             delete[] fields;
             value = cvalue;
         }
-	    CNVDispose(reader);
+        else
+        {
+            throw std::runtime_error("setValueCNV: param \""  + name + "\" cannot read cluster for \"" + item->nv_name + "\"");
+            return;
+        }
 	}
 	if (item->access & NvItem::Write)
 	{
