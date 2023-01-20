@@ -32,7 +32,7 @@
 				  float64array, int8array, int16array, int32array - see @link NetShrVarConfig.xsd @endlink
 		  "netvar" is the path to the shared variable - you can use / rather than \
 		  "fval" and "tval" are only used for boolean type, they are the strings to be displayed for false and true values
-		  "field" is only used for a structure type network shared variable, it indicates the structure element to access. Structures are read-only.
+		  "field" is only used for a structure type network shared variable, it indicates the structure element to access.
 	  -->
 	  <param name="cont1" type="float64" access="BR,BW" netvar="//localhost/example/some_control" /> 
 	
@@ -65,17 +65,21 @@
            sorted out automatically -->
 	  <param name="arrayDble" type="float64array" access="R,BW" with_ts="true" netvar="//localhost/example/arrayDble" /> 
 
-      <!-- CVI is not able to read a waveform data type, so a variant or structure/cluster must be used instead in labview
+      <!-- CVI is not able to read a labview waveform data type, so a variant or structure/cluster must be used instead in labview
 	       and a network variable of type variant created in either case -->
 	  
-      <!-- fields in a structure need to be indexed by number not name, only reading is supported
+      <!-- fields in a structure need to be indexed by number not name, this is the cluster order index
 	       if you use "reorder controls in cluster" option for cluster in labview, you can see the 
 		   field index to use, index starts at 0
 		   
 		   The whole shared variable structure updates at the same time, so you do not need to subscribe to 
            it for every item that reads a field. For example both struct_dt and struct_Y refer to the same
            network variable (but different fields) so only one item referring to the shared variable
-		   (struct_dt in this case) needs to subscribe (access="R") and the other will get updated at the same time. 	   
+		   (struct_dt in this case) needs to subscribe (access="R") and the other will get updated at the same time. 
+
+           when a structure field is written via a epics PV it is necessary to read the whole structure, update field, write back.
+           this means that if two PVs referring to different fields in the same structure are written to simultaneously there
+           is potential for one overwriting the other with an old value.		   
 
            You can also use ts_param to refer to a structure member to be used for PV timestamp. As the whole structure
            shared variable is read at the same time, this may provide better synchronisation between timestamp and
@@ -85,6 +89,9 @@
 	  <param name="struct_dt" type="float64" access="R" netvar="//localhost/example/some_struct" field="1" /> 
 	  <param name="struct_ta" type="ftimestamp" access="" netvar="//localhost/example/some_struct" field="3" /> 
 	  <param name="struct_Y" type="float64array" access="" ts_param="struct_ta" netvar="//localhost/example/some_struct" field="2" /> 
+
+	  <param name="struct_extra" type="float64" access="R,W" netvar="//localhost/example/some_struct" field="4" /> 
+	  <param name="struct_extra_array" type="float64array" access="R,W" netvar="//localhost/example/some_struct" field="5" /> 
 
 	</section>
   

@@ -1382,9 +1382,54 @@ void NetShrVarInterface::setValueCNV(const std::string& name, CNVData value)
 {
 	NvItem* item = m_params[name];
 	int error = 0;
+	ScopedCNVData cvalue;
 	if (item->field != -1)
 	{
-        throw std::runtime_error("setValueCNV: unable to update struct variable via param \"" + name + "\"");
+        if (item->reader == NULL) {
+            int waitTime = 3000; // in milliseconds, or CNVWaitForever 
+            error = CNVCreateReader(item->nv_name.c_str(), NULL, NULL, waitTime, 0, &(item->reader));
+            ERROR_CHECK("CNVCreateReader", error);
+        }
+		m_driver->unlock(); // to allow DataCallback to work while we try to read
+        error = CNVRead(item->reader, 10, &cvalue);
+		m_driver->lock();
+        ERROR_CHECK("CNVRead", error);
+        if (cvalue != 0)
+        {
+            int field = item->field;
+            unsigned short numberOfFields = 0;
+            error = CNVGetNumberOfStructFields(cvalue, &numberOfFields);
+            ERROR_CHECK("CNVGetNumberOfStructFields", error);
+            if (numberOfFields == 0)
+            {
+                throw std::runtime_error("number of fields");
+            }
+            if (field < 0 || field >= numberOfFields)
+            {
+                throw std::runtime_error("field index");
+            }
+            CNVData* fields = new CNVData[numberOfFields];
+            error = CNVGetStructFields(cvalue, fields, numberOfFields);
+            ERROR_CHECK("CNVGetStructFields", error);
+            error = CNVDisposeData(fields[field]);
+            ERROR_CHECK("CNVDisposeData", error);
+            fields[field] = value;
+            error = CNVSetStructDataValue(cvalue, fields, numberOfFields);
+            ERROR_CHECK("CNVSetStructDataValue", error);
+            for(int i=0; i<numberOfFields; ++i) {
+                if (i != field) { // value will be freed by caller as scoped data
+                    error = CNVDisposeData(fields[i]);
+                    ERROR_CHECK("CNVDisposeData", error);
+                }
+            }
+            delete[] fields;
+            value = cvalue;
+        }
+        else
+        {
+            throw std::runtime_error("setValueCNV: param \""  + name + "\" cannot read cluster for \"" + item->nv_name + "\"");
+            return;
+        }
 	}
 	if (item->access & NvItem::Write)
 	{

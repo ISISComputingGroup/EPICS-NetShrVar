@@ -1,5 +1,5 @@
 ﻿<?xml version='1.0' encoding='UTF-8'?>
-<Project Type="Project" LVVersion="16008000">
+<Project Type="Project" LVVersion="21008000">
 	<Property Name="SMProvider.SMVersion" Type="Int">201310</Property>
 	<Property Name="varPersistentID:{136FBB01-D107-4BE5-A384-D4BFAD4F383C}" Type="Ref">/My Computer/example.lvlib/some_struct</Property>
 	<Property Name="varPersistentID:{28F126BF-F781-4D7C-997C-F1EB3BFD178B}" Type="Ref">/My Computer/example.lvlib/some_indicator</Property>
