@@ -31,7 +31,6 @@
 		<Item Name="example.lvlib" Type="Library" URL="../example.lvlib"/>
 		<Item Name="example.vi" Type="VI" URL="../example.vi"/>
 		<Item Name="half_min_ts.vi" Type="VI" URL="../half_min_ts.vi"/>
-		<Item Name="struct_array.ctl" Type="VI" URL="../struct_array.ctl"/>
 		<Item Name="Dependencies" Type="Dependencies"/>
 		<Item Name="Build Specifications" Type="Build"/>
 	</Item>
