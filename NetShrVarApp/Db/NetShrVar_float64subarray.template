@@ -16,7 +16,6 @@ record(subArray, "$(P)_$(PARAM)")
     field(INP,  "$(P)$(PARAM) CP")
     field(SCAN, "Passive")
 	field(PREC, "$(PREC)")
-    field(EGU, "$(EGU)")
 }
 
 record(ai, "$(P)$(PARAM)_$(INDX)")
