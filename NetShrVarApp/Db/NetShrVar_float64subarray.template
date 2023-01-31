@@ -1,0 +1,30 @@
+# % macro, P, device prefix
+# % macro, PORT, asyn port
+# % macro, PARAM, asyn port
+# % macro, NELM, asyn array full size
+# % macro, INDX, subarray index
+
+# extract one element of a float64array as an ai record
+ 
+record(subArray, "$(P)_$(PARAM)")
+{
+	field(EGU, "$(EGU)")
+    field(NELM, "1")
+    field(MALM, "$(NELM)")
+    field(INDX, "$(INDX)")
+    field(FTVL, "DOUBLE")
+    field(INP,  "$(P)$(PARAM) CP")
+    field(SCAN, "Passive")
+	field(PREC, "$(PREC)")
+    field(EGU, "$(EGU)")
+}
+
+record(ai, "$(P)$(PARAM)_$(INDX)")
+{
+	field(EGU, "$(EGU)")
+    field(INP,  "$(P)_$(PARAM) CP")
+    field(SCAN, "Passive")
+	field(PREC, "$(PREC)")
+}
+
+#

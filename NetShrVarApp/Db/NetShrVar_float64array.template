@@ -1,0 +1,29 @@
+# % macro, P, device prefix
+# % macro, PORT, asyn port
+# % macro, RPARAM, asyn read param
+# % macro, SPARAM, asyn set param
+# % macro, NELM, asyn array size
+
+record(waveform, "$(P)$(PARAM)")
+{
+    field(NELM, "$(NELM)")
+    field(FTVL, "DOUBLE")
+    field(DTYP, "asynFloat64ArrayIn")
+    field(INP,  "@asyn($(PORT),0,0)$(RPARAM)")
+    field(SCAN, "$(SCAN)")
+    field(PREC, "$(PREC)")
+    field(EGU, "$(EGU)")
+}
+
+record(waveform, "$(P)$(PARAM):SP")
+{
+    field(NELM, "$(NELM)")
+    field(FTVL, "DOUBLE")
+    field(DTYP, "asynFloat64ArrayOut")
+    field(INP,  "@asyn($(PORT),0,0)$(SPARAM)")
+    field(SCAN, "Passive")
+    field(PREC, "$(PREC)")
+    field(EGU, "$(EGU)")
+}
+
+#
