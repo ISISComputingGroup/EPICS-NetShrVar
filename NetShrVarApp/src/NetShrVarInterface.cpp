@@ -302,6 +302,11 @@ static const char* getBrowseType(CNVBrowseType browseType)
 // this looks to see if a path can be browsed
 bool NetShrVarInterface::pathExists(const std::string& path)
 {
+    static int netshrvar_simulate = getenv("NETSHRVAR_SIMULATE") != NULL ? atoi(getenv("NETSHRVAR_SIMULATE")) : 0;
+    if (netshrvar_simulate)
+    {
+        return true;
+    }
 #ifdef _WIN32
 	CNVBrowser browser = NULL;
 	char* item = NULL;
@@ -335,7 +340,7 @@ bool NetShrVarInterface::pathExists(const std::string& path)
 
 // this only works for localhost variables
 bool NetShrVarInterface::varExists(const std::string& path)
-{	
+{
 #ifdef _WIN32
 		int error, exists = 0;
 		size_t proc_pos = path.find('\\', 2); // 2 for after \\ in \\localhost\proc\var
@@ -433,6 +438,7 @@ void NetShrVarInterface::connectVars()
 	m_params.insert(new_params.begin(), new_params.end());
 	
 	initAsynParamIds();
+    static int netshrvar_simulate = getenv("NETSHRVAR_SIMULATE") != NULL ? atoi(getenv("NETSHRVAR_SIMULATE")) : 0;
 
 	// now connect vars
 	for(params_t::const_iterator it=m_params.begin(); it != m_params.end(); ++it)
@@ -443,7 +449,11 @@ void NetShrVarInterface::connectVars()
 		std::cerr << "connectVars: connecting to \"" << item->nv_name << "\"" << std::endl;
 		
 		// create either reader or buffered reader
-		if (item->access & NvItem::Read)
+        if (netshrvar_simulate)
+        {
+            ;
+        }
+		else if (item->access & NvItem::Read)
 		{
 	        error = CNVCreateSubscriber(item->nv_name.c_str(), DataCallback, StatusCallback, cb_data, waitTime, 0, &(item->subscriber));
 	        ERROR_PRINT_CONTINUE("CNVCreateSubscriber", error);
@@ -461,7 +471,11 @@ void NetShrVarInterface::connectVars()
 	        ERROR_PRINT_CONTINUE("CNVCreateReader", error);
 		}
 		// create either writer or buffered writer
-		if (item->access & NvItem::Write)
+        if (netshrvar_simulate)
+        {
+            ;
+        }
+		else if (item->access & NvItem::Write)
 		{
 	        error = CNVCreateWriter(item->nv_name.c_str(), StatusCallback, cb_data, waitTime, 0, &(item->writer));
 	        ERROR_PRINT_CONTINUE("CNVCreateWriter", error);
@@ -1474,10 +1488,11 @@ void NetShrVarInterface::updateValues()
 {
     CNVBufferDataStatus dataStatus;
 	int status;
+    static int netshrvar_simulate = getenv("NETSHRVAR_SIMULATE") != NULL ? atoi(getenv("NETSHRVAR_SIMULATE")) : 0;
 	for(params_t::const_iterator it=m_params.begin(); it != m_params.end(); ++it)
 	{
 		const NvItem* item = it->second;
-		if (item->access & NvItem::Read)
+		if (netshrvar_simulate || item->access & NvItem::Read)
 		{
 		    ;  // we are a subscriber so automatically get updates on changes
 		}

@@ -6,7 +6,7 @@
 
 # extract one element of a float64array as an ai record
  
-record(subArray, "$(P)_$(PARAM)")
+record(subArray, "$(P)_$(PARAM)_$(INDX)")
 {
 	field(EGU, "$(EGU)")
     field(NELM, "1")
@@ -21,7 +21,7 @@ record(subArray, "$(P)_$(PARAM)")
 record(ai, "$(P)$(PARAM)_$(INDX)")
 {
 	field(EGU, "$(EGU)")
-    field(INP,  "$(P)_$(PARAM) CP")
+    field(INP,  "$(P)_$(PARAM)_$(INDX) CP")
     field(SCAN, "Passive")
 	field(PREC, "$(PREC)")
 }
