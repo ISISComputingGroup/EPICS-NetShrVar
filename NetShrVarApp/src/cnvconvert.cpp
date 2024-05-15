@@ -36,6 +36,7 @@ const char* C2CNV<char*>::desc = "CNVString";
 const char* C2CNV<float>::desc = "CNVSingle";
 const char* C2CNV<double>::desc = "CNVDouble";
 const char* C2CNV<char>::desc = "CNVInt8";
+const char* C2CNV<signed char>::desc = "CNVInt8";
 const char* C2CNV<unsigned char>::desc = "CNVUInt8";
 const char* C2CNV<short>::desc = "CNVInt16";
 const char* C2CNV<unsigned short>::desc = "CNVUInt16";
@@ -45,12 +46,14 @@ const char* C2CNV<__int64>::desc = "CNVInt64";
 const char* C2CNV<unsigned __int64>::desc = "CNVUInt64";
 
 // asyn callbacks take signed types only
+// epicsInt8 is now signed char rather than just char
 asynStatus (asynPortDriver::*C2CNV<double>::asyn_callback)(double* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksFloat64Array;
 asynStatus (asynPortDriver::*C2CNV<float>::asyn_callback)(float* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksFloat32Array;
 asynStatus (asynPortDriver::*C2CNV<int>::asyn_callback)(int* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksInt32Array;
 asynStatus (asynPortDriver::*C2CNV<short>::asyn_callback)(short* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksInt16Array;
-asynStatus (asynPortDriver::*C2CNV<char>::asyn_callback)(char* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksInt8Array;
+asynStatus (asynPortDriver::*C2CNV<char>::asyn_callback)(signed char* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksInt8Array;
+asynStatus (asynPortDriver::*C2CNV<signed char>::asyn_callback)(signed char* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksInt8Array;
 asynStatus (asynPortDriver::*C2CNV<unsigned int>::asyn_callback)(int* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksInt32Array;
 asynStatus (asynPortDriver::*C2CNV<unsigned short>::asyn_callback)(short* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksInt16Array;
-asynStatus (asynPortDriver::*C2CNV<unsigned char>::asyn_callback)(char* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksInt8Array;
-asynStatus (asynPortDriver::*C2CNV<bool>::asyn_callback)(char* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksInt8Array;
+asynStatus (asynPortDriver::*C2CNV<unsigned char>::asyn_callback)(signed char* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksInt8Array;
+asynStatus (asynPortDriver::*C2CNV<bool>::asyn_callback)(signed char* value, size_t nElements, int reason, int addr) = &asynPortDriver::doCallbacksInt8Array;

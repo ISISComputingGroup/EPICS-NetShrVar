@@ -178,6 +178,14 @@ struct C2CNV<char>
 };
 
 template<>
+struct C2CNV<signed char>
+{
+    enum { nvtype = CNVInt8 };
+	static const char* desc;
+	static asynStatus (asynPortDriver::*asyn_callback)(epicsInt8* value, size_t nElements, int reason, int addr);
+};
+
+template<>
 struct C2CNV<unsigned char>
 {
     enum { nvtype = CNVUInt8 };

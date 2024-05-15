@@ -1569,11 +1569,13 @@ template void NetShrVarInterface::setArrayValue(const char* param, const float* 
 template void NetShrVarInterface::setArrayValue(const char* param, const int* value, size_t nElements);
 template void NetShrVarInterface::setArrayValue(const char* param, const short* value, size_t nElements);
 template void NetShrVarInterface::setArrayValue(const char* param, const char* value, size_t nElements);
+template void NetShrVarInterface::setArrayValue(const char* param, const signed char* value, size_t nElements);
 
 template void NetShrVarInterface::readArrayValue(const char* paramName, double* value, size_t nElements, size_t* nIn);
 template void NetShrVarInterface::readArrayValue(const char* paramName, float* value, size_t nElements, size_t* nIn);
 template void NetShrVarInterface::readArrayValue(const char* paramName, int* value, size_t nElements, size_t* nIn);
 template void NetShrVarInterface::readArrayValue(const char* paramName, short* value, size_t nElements, size_t* nIn);
 template void NetShrVarInterface::readArrayValue(const char* paramName, char* value, size_t nElements, size_t* nIn);
+template void NetShrVarInterface::readArrayValue(const char* paramName, signed char* value, size_t nElements, size_t* nIn);
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */

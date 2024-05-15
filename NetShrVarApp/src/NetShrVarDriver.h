@@ -55,7 +55,7 @@ private:
 
 	asynStatus readValue(asynUser *pasynUser, const char* functionName);
 	template<typename T> asynStatus writeValue(asynUser *pasynUser, const char* functionName, T value);
-	template<typename T> asynStatus writeArrayValue(asynUser *pasynUser, const char* functionName, T* value, size_t nElements);
+	template<typename T> asynStatus writeArrayValue(asynUser *pasynUser, const char* functionName, T *value, size_t nElements);
 	template<typename T> asynStatus readArrayValue(asynUser *pasynUser, const char* functionName, T *value, size_t nElements, size_t *nIn);
 
 	static void NetShrVarTask(void* arg);
